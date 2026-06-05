@@ -115,6 +115,10 @@ tr:hover td{background:var(--bg3)}
 .b-na{background:rgba(153,153,153,.12);color:#999}
 /* Pgto cell */
 .pg-cell{font-weight:600;font-size:12px}
+.ctr-sign{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;border:1px solid var(--border2);margin-bottom:12px;cursor:pointer;transition:all .15s}
+.ctr-sign:hover{background:var(--bg3)}
+.ctr-sign.assinado{border-color:var(--success);background:rgba(74,255,140,.06)}
+.ctr-sign-icon{font-size:20px}
 .pg-pago{color:var(--success)}
 .pg-aberto{color:var(--warning)}
 .pg-na{color:var(--text3)}
@@ -202,6 +206,24 @@ tr:hover td{background:var(--bg3)}
 .vtoggle{display:flex;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px}
 .vtbtn{padding:5px 11px;border-radius:6px;font-size:12px;cursor:pointer;border:none;background:transparent;color:var(--text2);transition:all .15s;font-weight:500}
 .vtbtn.active{background:var(--accent);color:#fff}
+/* Login */
+.login-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:36px 40px;width:380px;text-align:center}
+.login-logo{margin-bottom:24px}
+.login-logo img{width:160px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.user-info{display:flex;align-items:center;gap:8px;padding:8px 6px;border-radius:7px;font-size:12px;color:var(--text2)}
+.role-badge{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600}
+.role-admin{background:rgba(255,184,74,.2);color:#ffb84a}
+.role-supervisor{background:rgba(74,184,255,.2);color:#4ab8ff}
+.role-atendente{background:rgba(74,255,140,.2);color:#4aff8c}
+/* Status cliente badge */
+.cli-status{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.cs-pendente{background:rgba(255,92,92,.15);color:#ff5c5c}
+.cs-analise{background:rgba(255,184,74,.15);color:#ffb84a}
+.cs-aprovado{background:rgba(74,255,140,.15);color:#4aff8c}
+.cs-confianca{background:rgba(74,184,255,.15);color:#4ab8ff}
+.cs-bloqueado{background:rgba(100,100,100,.2);color:#999}
 </style>
 
 </head>
@@ -221,6 +243,14 @@ tr:hover td{background:var(--bg3)}
       <div class="ni" onclick="go('checklist')"><span class="icon">✅</span>Checklist</div>
     </nav>
     <div class="sidebar-bottom">
+      <div class="user-info" id="sidebar-user">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:500;color:var(--text);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="user-name">—</div>
+          <span class="role-badge" id="user-role-badge"></span>
+        </div>
+        <button style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:12px" onclick="doLogout()" title="Sair">↩</button>
+      </div>
       <div class="theme-row" onclick="toggleTheme()">
         <div class="sw" id="theme-sw"><div class="sw-knob"></div></div>
         <span id="theme-lbl">Modo escuro</span>
@@ -299,7 +329,7 @@ tr:hover td{background:var(--bg3)}
     <div id="page-clientes" class="page">
       <div class="ph"><h1>Clientes</h1><button class="btn btn-p" onclick="openM('m-novo-cli')">+ Novo cliente</button></div>
       <div class="search-wrap"><input type="text" placeholder="Buscar cliente..." oninput="renderClientes(this.value)"></div>
-      <div class="card"><table><thead><tr><th>Nome</th><th>CPF / CNPJ</th><th>Telefone</th><th>E-mail</th><th>OS</th><th></th></tr></thead>
+      <div class="card"><table><thead><tr><th>Nome</th><th>CPF / CNPJ</th><th>Telefone</th><th>E-mail</th><th>OS</th><th>Status</th><th></th></tr></thead>
       <tbody id="cli-tbody"></tbody></table></div>
     </div>
 
@@ -514,6 +544,17 @@ tr:hover td{background:var(--bg3)}
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <h3 style="margin-bottom:10px">Alterar status</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px" id="vos-status-btns"></div>
+        <!-- Contrato -->
+        <div style="margin-bottom:14px;padding:12px 16px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="checkbox" id="vos-contrato-check" onchange="setContratoAssinado(this.checked)" style="width:18px;height:18px;cursor:pointer">
+            <div>
+              <div style="font-size:13px;font-weight:500" id="vos-contrato-label">📄 Contrato assinado</div>
+              <div style="font-size:11px;color:var(--text3)">Obrigatório para marcar como Alugado</div>
+            </div>
+          </div>
+          <span id="vos-contrato-badge" class="badge"></span>
+        </div>
         <div class="g2">
           <div class="fg">
             <label style="color:var(--warning)">💰 Pagamento</label>
@@ -563,6 +604,21 @@ tr:hover td{background:var(--bg3)}
     </div>
     <div class="fg"><label>E-mail</label><input type="email" id="cli-email"></div>
     <div class="fg"><label>Endereço</label><input type="text" id="cli-end"></div>
+    <div class="g2">
+      <div class="fg"><label>Status do cadastro</label>
+        <select id="cli-status">
+          <option value="pendente">🔴 Pendente</option>
+          <option value="analise">🟡 Em análise</option>
+          <option value="aprovado" selected>🟢 Aprovado</option>
+          <option value="confianca">⭐ De confiança</option>
+          <option value="bloqueado">🔒 Bloqueado</option>
+        </select>
+      </div>
+      <div class="fg" style="display:flex;align-items:center;gap:8px;margin-top:20px">
+        <input type="checkbox" id="cli-confianca" style="width:auto">
+        <label for="cli-confianca" style="margin:0;font-size:13px">Cliente de confiança <span style="font-size:11px;color:var(--text3)">(isento de regras)</span></label>
+      </div>
+    </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
       <button class="btn btn-g" onclick="closeM('m-novo-cli')">Cancelar</button>
       <button class="btn btn-p" onclick="salvarCliente()">Salvar</button>
@@ -614,6 +670,51 @@ tr:hover td{background:var(--bg3)}
 <script>
 // ===== CONSTANTES =====
 const SL = {pendente:'Pendente',pre_reserva:'Pré-reserva',reservado:'Reservado',alugado:'Alugado',devolvido:'Devolvido',conserto:'Conserto',consertado:'Consertado',emprestado:'Emprestado',cancelado:'Cancelado',vendido:'Vendido'};
+
+// ===== USUÁRIOS =====
+const USUARIOS = [
+  {id:1,nome:'Josue',senha:'blip2024',role:'admin',inicial:'J'},
+  {id:2,nome:'Bluneli',senha:'blip2024',role:'supervisor',inicial:'B'},
+  {id:3,nome:'Jéssica',senha:'blip2024',role:'atendente',inicial:'Js'},
+];
+let currentUser = null;
+
+function doLogin(){
+  const nome=document.getElementById('login-user').value.trim();
+  const senha=document.getElementById('login-pass').value;
+  const user=USUARIOS.find(u=>u.nome.toLowerCase()===nome.toLowerCase()&&u.senha===senha);
+  if(!user){document.getElementById('login-err').style.display='block';return;}
+  document.getElementById('login-err').style.display='none';
+  currentUser=user;
+  document.getElementById('login-screen').style.display='none';
+  // Preencher info na sidebar
+  document.getElementById('user-name').textContent=user.nome;
+  document.getElementById('user-avatar').textContent=user.inicial;
+  const roleLabels={admin:'👑 Admin',supervisor:'🔵 Supervisor',atendente:'🟢 Atendente'};
+  const roleCls={admin:'role-admin',supervisor:'role-supervisor',atendente:'role-atendente'};
+  const rb=document.getElementById('user-role-badge');
+  rb.textContent=roleLabels[user.role];rb.className='role-badge '+roleCls[user.role];
+  // Preencher atendente na nova OS
+  document.getElementById('nos-atendente').value=user.nome;
+  init();
+}
+
+function doLogout(){
+  if(!confirm('Deseja sair?'))return;
+  currentUser=null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+}
+
+function canDo(action){
+  if(!currentUser)return false;
+  const r=currentUser.role;
+  if(r==='admin')return true;
+  if(r==='supervisor')return ['aprovar_cliente','desbloquear_os','ver_analise'].includes(action)?true:true;
+  // atendente pode tudo exceto ações administrativas
+  return !['aprovar_cliente','gerenciar_usuarios'].includes(action);
+}
 const SUPABASE_URL='https://bqqkplmfoumvjmwqwwgs.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxcWtwbG1mb3Vtdmptd3F3d2dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MTI0MDMsImV4cCI6MjA5NjA4ODQwM30.6_azTXQGfIvsqLxlyLeGDrmnCRmpZXMjln9CzezJ7Dg';
 
@@ -852,7 +953,7 @@ function renderDashboard(){
 function renderLembretes(){
   const hoje=new Date();hoje.setHours(0,0,0,0);
   const em3=new Date(hoje);em3.setDate(hoje.getDate()+3);
-  const pgAberto=cache.os.filter(o=>o.pagamento==='em aberto'&&['alugado','reservado','pre_reserva'].includes(o.status)).length;
+  const pgAberto=cache.os.filter(o=>o.pagamento==='em aberto'&&['alugado','devolvido'].includes(o.status)).length;
   const retProx=cache.os.filter(o=>{
     if(!['reservado','pre_reserva'].includes(o.status))return false;
     const d=new Date(o.retirada);d.setHours(0,0,0,0);return d>=hoje&&d<=em3;
@@ -863,10 +964,12 @@ function renderLembretes(){
   }).length;
   const badge=document.getElementById('badge-pgto');
   if(badge){badge.textContent=pgAberto;badge.style.display=pgAberto>0?'inline':'none';}
+  const cliPendentes=cache.clientes.filter(c=>['pendente','analise'].includes(c.status_cadastro)).length;
   const items=[];
   if(retProx)items.push(`<div class="lemb" style="background:rgba(74,184,255,.1);border-color:var(--accent)" onclick="setOsFilter('reservado',null);go('os')"><div class="lemb-n">${retProx}</div><div class="lemb-t">🔔 Retirada próxima (3 dias)</div></div>`);
   if(devProx)items.push(`<div class="lemb" style="background:rgba(255,184,74,.1);border-color:var(--warning)" onclick="setOsFilter('alugado',null);go('os')"><div class="lemb-n">${devProx}</div><div class="lemb-t">📦 Devolução próxima (3 dias)</div></div>`);
   if(pgAberto)items.push(`<div class="lemb" style="background:rgba(255,92,92,.1);border-color:var(--danger)" onclick="setPgtoFilter('em aberto',null);go('os')"><div class="lemb-n" style="color:var(--danger)">${pgAberto}</div><div class="lemb-t">💰 Pagamentos em aberto</div></div>`);
+  if(cliPendentes)items.push(`<div class="lemb" style="background:rgba(184,74,255,.1);border-color:var(--purple)" onclick="go('clientes')"><div class="lemb-n" style="color:var(--purple)">${cliPendentes}</div><div class="lemb-t">👤 Cadastros pendentes</div></div>`);
   const grid = document.getElementById('lemb-grid');
   if(grid) grid.innerHTML = items.length ? items.join('') : '';
 }
@@ -892,7 +995,7 @@ function renderOS(q){
   const tbody=document.getElementById('os-tbody');
   tbody.innerHTML=list.length?list.map(o=>{
     const c=cli(o.cliente_id);const{total}=osTotal(o);
-    const pgAberto=o.pagamento==='em aberto'&&['alugado','reservado','pre_reserva'].includes(o.status);
+    const pgAberto=o.pagamento==='em aberto'&&['alugado','devolvido'].includes(o.status);
     return`<tr style="${pgAberto?'background:rgba(255,184,74,.04)':''}">
       <td><b style="font-family:Arial,monospace">#${o.numero}</b></td>
       <td>${c?c.nome:'—'}</td>
@@ -1109,6 +1212,16 @@ function verOS(id){
   document.getElementById('vos-com').textContent=o.comentario||'—';
   document.getElementById('vos-pgto-sel').value=o.pagamento||'em aberto';
   document.getElementById('vos-com-edit').value=o.comentario||'';
+  // Assinatura
+  updateAssinaturaUI(o.contrato_assinado);
+  // Contrato
+  const ctrCheck=document.getElementById('vos-contrato-check');
+  const ctrBadge=document.getElementById('vos-contrato-badge');
+  if(ctrCheck){ctrCheck.checked=o.contrato_assinado||false;}
+  if(ctrBadge){
+    if(o.contrato_assinado){ctrBadge.className='badge b-devolvido';ctrBadge.textContent='✅ Assinado';}
+    else{ctrBadge.className='badge b-aberto';ctrBadge.textContent='⚠️ Pendente';}
+  }
   const dias=calcDias(o.retirada,o.devolucao);
   document.getElementById('vos-itens').innerHTML=(o.itens||[]).map(i=>{
     const e=eq(i.equip_id);
@@ -1148,6 +1261,12 @@ function renderStatusBtns(o){
   document.getElementById('vos-status-btns').innerHTML=todos.map(s=>{
     let bloqueado=false,motivo='';
     if(s==='alugado'&&o.pagamento!=='pago'){bloqueado=true;motivo='Confirme o pagamento primeiro';}
+    const cliObj=cli(o.cliente_id);
+    if(s==='alugado'&&!o.contrato_assinado&&(!cliObj||!cliObj.de_confianca)){bloqueado=true;motivo='Assine o contrato primeiro';}
+    if(s==='alugado'&&!o.contrato_assinado){
+      const cliObj=cli(o.cliente_id);
+      if(!cliObj||!cliObj.de_confianca){bloqueado=true;motivo='Assine o contrato primeiro';}
+    }
     if(s==='devolvido'){
       const dev=new Date(o.devolucao+'T'+(o.hora_devolucao||'18:00')+':00');
       if(new Date()<new Date(dev.getTime()-3600000)){bloqueado=true;motivo=`Disponível a partir de ${fmtD(o.devolucao)}`;}
@@ -1164,6 +1283,20 @@ async function setOsStatus(s){
   // Regras de fluxo
   if(s==='alugado' && o.pagamento!=='pago'){
     toast('⚠️ Confirme o pagamento antes de marcar como Alugado!','err');return;
+  }
+  if(s==='alugado' && !o.contrato_assinado){
+    // Verificar se cliente é de confiança
+    const cliObj=cli(o.cliente_id);
+    if(!cliObj||!cliObj.de_confianca){
+      toast('⚠️ O contrato precisa estar assinado antes de marcar como Alugado!','err');return;
+    }
+  }
+  if(s==='alugado' && !o.contrato_assinado){
+    // Verificar se cliente é de confiança
+    const cliObj=cli(o.cliente_id);
+    if(!cliObj||!cliObj.de_confianca){
+      toast('⚠️ Contrato precisa estar assinado antes de marcar como Alugado!','err');return;
+    }
   }
   if(s==='devolvido'){
     const dev=new Date(o.devolucao+'T'+(o.hora_devolucao||'18:00')+':00');
@@ -1182,6 +1315,37 @@ async function setOsStatus(s){
     document.getElementById('vos-status-badge').textContent=SL[s];
     if(pgto!==o.pagamento){updateVosPgtoBadge(pgto);updateVosPgtoEl(pgto);document.getElementById('vos-pgto-sel').value=pgto;}
     toast('Status atualizado!');renderOS();renderDashboard();
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+function updateAssinaturaUI(assinado){
+  const box=document.getElementById('ctr-sign-box');
+  const icon=document.getElementById('ctr-sign-icon');
+  const txt=document.getElementById('ctr-sign-txt');
+  const check=document.getElementById('ctr-sign-check');
+  if(!box)return;
+  if(assinado){
+    box.classList.add('assinado');
+    icon.textContent='✅';
+    txt.textContent='Contrato assinado';
+    if(check)check.textContent='✓';
+  }else{
+    box.classList.remove('assinado');
+    icon.textContent='📄';
+    txt.textContent='Contrato não assinado';
+    if(check)check.textContent='';
+  }
+}
+
+async function toggleAssinatura(){
+  const o=cache.os.find(x=>x.id===currentOSId);if(!o)return;
+  const novoVal=!o.contrato_assinado;
+  try{
+    await sb('ordens_servico','PATCH',{contrato_assinado:novoVal},`?id=eq.${currentOSId}`);
+    o.contrato_assinado=novoVal;currentOS=o;
+    updateAssinaturaUI(novoVal);
+    renderStatusBtns(o);
+    toast(novoVal?'Contrato marcado como assinado ✅':'Assinatura removida');
   }catch(e){toast('Erro: '+e.message,'err');}
 }
 
@@ -1207,6 +1371,21 @@ async function setOsPgto(v){
 async function setOsCom(v){
   const o=cache.os.find(x=>x.id===currentOSId);if(!o)return;
   try{await sb('ordens_servico','PATCH',{comentario:v},`?id=eq.${currentOSId}`);o.comentario=v;renderOS();}catch(e){}
+}
+
+async function setContratoAssinado(val){
+  const o=cache.os.find(x=>x.id===currentOSId);if(!o)return;
+  try{
+    await sb('ordens_servico','PATCH',{contrato_assinado:val},`?id=eq.${currentOSId}`);
+    o.contrato_assinado=val;
+    const badge=document.getElementById('vos-contrato-badge');
+    if(badge){
+      if(val){badge.className='badge b-devolvido';badge.textContent='✅ Assinado';}
+      else{badge.className='badge b-aberto';badge.textContent='⚠️ Pendente';}
+    }
+    toast(val?'Contrato marcado como assinado!':'Contrato desmarcado');
+    renderStatusBtns(o);renderOS();
+  }catch(e){toast('Erro: '+e.message,'err');}
 }
 
 function vosTab(tab,el){
@@ -1352,13 +1531,15 @@ function editarCliente(id){
   document.getElementById('cli-tel').value=c.tel||'';
   document.getElementById('cli-email').value=c.email||'';
   document.getElementById('cli-end').value=c.end||'';
+  document.getElementById('cli-status').value=c.status_cadastro||'aprovado';
+  document.getElementById('cli-confianca').checked=c.de_confianca||false;
   openM('m-novo-cli');
 }
 
 async function salvarCliente(){
   const nome=document.getElementById('cli-nome').value.trim();
   if(!nome){toast('Informe o nome','err');return;}
-  const data={nome,doc:document.getElementById('cli-doc').value,tel:document.getElementById('cli-tel').value,email:document.getElementById('cli-email').value,end:document.getElementById('cli-end').value};
+  const data={nome,doc:document.getElementById('cli-doc').value,tel:document.getElementById('cli-tel').value,email:document.getElementById('cli-email').value,end:document.getElementById('cli-end').value,status_cadastro:document.getElementById('cli-status').value,de_confianca:document.getElementById('cli-confianca').checked};
   const editId=parseInt(document.getElementById('cli-edit-id').value);
   try{
     if(editId){
@@ -1788,7 +1969,10 @@ document.getElementById('eos-ret').addEventListener('change',()=>{renderEosItens
 document.getElementById('eos-dev').addEventListener('change',()=>{renderEosItens();renderEqSel('','eos');calcEosTotal();});
 
 // ===== INIT =====
-init();
+// init() é chamado após login
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('login-screen').style.display='flex';
+});
 </script>
 </body>
 </html>
