@@ -228,7 +228,7 @@ tr:hover td{background:var(--bg3)}
 
 </head>
 <body>
-<div class="shell">
+<div class="shell" id="main-shell" style="display:none">
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="sidebar-logo">
@@ -696,13 +696,19 @@ function doLogin(){
   rb.textContent=roleLabels[user.role];rb.className='role-badge '+roleCls[user.role];
   // Preencher atendente na nova OS
   document.getElementById('nos-atendente').value=user.nome;
+  // Mostrar sistema
+  const ms=document.getElementById('main-shell');
+  if(ms)ms.style.display='flex';
   init();
 }
 
 function doLogout(){
   if(!confirm('Deseja sair?'))return;
   currentUser=null;
-  document.getElementById('login-screen').style.display='flex';
+  const ms=document.getElementById('main-shell');
+  const ls=document.getElementById('login-screen');
+  if(ms)ms.style.display='none';
+  if(ls)ls.style.display='flex';
   document.getElementById('login-user').value='';
   document.getElementById('login-pass').value='';
 }
@@ -1323,7 +1329,7 @@ function updateAssinaturaUI(assinado){
   const icon=document.getElementById('ctr-sign-icon');
   const txt=document.getElementById('ctr-sign-txt');
   const check=document.getElementById('ctr-sign-check');
-  if(!box)return;
+  if(!box||!icon||!txt)return;
   if(assinado){
     box.classList.add('assinado');
     icon.textContent='✅';
@@ -1963,15 +1969,23 @@ function loadCkPhotos(osId,type){if(!idb)return;const tx=idb.transaction('photos
 function handleCkPhotos(input,type,osId){Array.from(input.files).forEach(f=>{const r=new FileReader();r.onload=e=>{const url=e.target.result;savePhoto(osId,type,url);const grid=document.getElementById(`ck-photos-${type}`);if(grid){const img=document.createElement('img');img.src=url;img.className='ph-thumb';grid.appendChild(img);}};r.readAsDataURL(f);});}
 
 // ===== LISTENERS =====
-document.getElementById('nos-ret').addEventListener('change',()=>{renderNosItens();renderEqSel('','nos');calcNosTotal();});
-document.getElementById('nos-dev').addEventListener('change',()=>{renderNosItens();renderEqSel('','nos');calcNosTotal();});
-document.getElementById('eos-ret').addEventListener('change',()=>{renderEosItens();renderEqSel('','eos');calcEosTotal();});
-document.getElementById('eos-dev').addEventListener('change',()=>{renderEosItens();renderEqSel('','eos');calcEosTotal();});
+// Listeners seguros
+['nos-ret','nos-dev'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el)el.addEventListener('change',()=>{renderNosItens();renderEqSel('','nos');calcNosTotal();});
+});
+['eos-ret','eos-dev'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el)el.addEventListener('change',()=>{renderEosItens();renderEqSel('','eos');calcEosTotal();});
+});
 
 // ===== INIT =====
 // init() é chamado após login
 document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('login-screen').style.display='flex';
+  const ls=document.getElementById('login-screen');
+  const ms=document.getElementById('main-shell');
+  if(ls)ls.style.display='flex';
+  if(ms)ms.style.display='none';
 });
 </script>
 </body>
