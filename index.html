@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blip Locadora</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -38,9 +38,9 @@
 .light .pg-pago{color:#1a9e4a}
 .light .pg-aberto{color:#b86e00}
 .light .lemb-t{color:#555}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;transition:background .25s,color .25s}
-button{font-family:'DM Sans',sans-serif;cursor:pointer;border:none;outline:none}
-input,select,textarea{font-family:'DM Sans',sans-serif;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:8px 12px;font-size:13px;width:100%;outline:none;transition:border .15s,background .2s,color .2s}
+body{font-family:Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;transition:background .25s,color .25s}
+button{font-family:Arial,sans-serif;cursor:pointer;border:none;outline:none}
+input,select,textarea{font-family:Arial,sans-serif;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:8px 12px;font-size:13px;width:100%;outline:none;transition:border .15s,background .2s,color .2s}
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 select option{background:var(--bg2)}
 label{font-size:12px;color:var(--text2);display:block;margin-bottom:4px}
@@ -85,12 +85,12 @@ nav{padding:12px 10px;flex:1;overflow-y:auto}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
 .stat{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;transition:background .25s}
 .stat-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
-.stat-val{font-size:26px;font-weight:600;letter-spacing:-1px;font-family:'DM Mono',monospace}
+.stat-val{font-size:26px;font-weight:600;letter-spacing:-1px;font-family:Arial,monospace}
 /* Lembretes */
 .lemb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:16px}
 .lemb{border-radius:10px;padding:13px 16px;border-left:4px solid;cursor:pointer;transition:opacity .15s}
 .lemb:hover{opacity:.82}
-.lemb-n{font-size:24px;font-weight:700;font-family:'DM Mono',monospace;margin-bottom:2px}
+.lemb-n{font-size:24px;font-weight:700;font-family:Arial,monospace;margin-bottom:2px}
 .lemb-t{font-size:11px;color:var(--text2)}
 /* Table */
 table{width:100%;border-collapse:collapse}
@@ -118,6 +118,12 @@ tr:hover td{background:var(--bg3)}
 .pg-pago{color:var(--success)}
 .pg-aberto{color:var(--warning)}
 .pg-na{color:var(--text3)}
+.light .stat-val{color:var(--text)}
+.light .eq-pr{color:var(--accent)}
+.light input,.light select,.light textarea{background:#fff;color:var(--text);border-color:var(--border2)}
+.light .card{box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.light .modal{box-shadow:0 4px 24px rgba(0,0,0,.12)}
+.light .toast{box-shadow:0 2px 12px rgba(0,0,0,.1)}
 /* Modal */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
 .overlay.open{display:flex}
@@ -144,11 +150,11 @@ tr:hover td{background:var(--bg3)}
 .eq-card.sel{border-color:var(--accent);background:rgba(74,184,255,.06)}
 .eq-nm{font-size:13px;font-weight:500;margin-bottom:3px}
 .eq-cat{font-size:11px;color:var(--text3);margin-bottom:8px}
-.eq-pr{font-size:15px;font-weight:600;color:var(--accent);font-family:'DM Mono',monospace}
+.eq-pr{font-size:15px;font-weight:600;color:var(--accent);font-family:Arial,monospace}
 .qty-ctrl{display:flex;align-items:center;gap:8px;margin-top:8px}
 .qty-btn{width:26px;height:26px;border-radius:6px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s}
 .qty-btn:hover{background:var(--bg4)}
-.qty-v{font-family:'DM Mono',monospace;font-size:14px;font-weight:600;min-width:20px;text-align:center}
+.qty-v{font-family:Arial,monospace;font-size:14px;font-weight:600;min-width:20px;text-align:center}
 /* Avulso row */
 .av-row{display:grid;grid-template-columns:1fr 95px 70px 24px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--border)}
 /* OS list row */
@@ -168,7 +174,7 @@ tr:hover td{background:var(--bg3)}
 .chk-box.on{background:var(--success);border-color:var(--success);color:#000}
 .ph-thumb{width:66px;height:66px;object-fit:cover;border-radius:7px;border:1px solid var(--border2)}
 /* OS preview */
-.osp{background:#fff;color:#111;font-family:'DM Sans',sans-serif;padding:28px 32px;border-radius:10px;font-size:12px}
+.osp{background:#fff;color:#111;font-family:Arial,sans-serif;padding:28px 32px;border-radius:10px;font-size:12px}
 .osp-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid #111}
 .osp-meta{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e0e0e0}
 .osp-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:#888;margin-bottom:2px}
@@ -181,7 +187,7 @@ tr:hover td{background:var(--bg3)}
 .osp-tot-row.big{font-size:15px;font-weight:700;color:#111;border-top:1px solid #ddd;padding-top:7px;margin-top:3px}
 .osp-foot{font-size:9px;color:#777;border-top:1px solid #e0e0e0;padding-top:10px;line-height:1.7}
 /* Contrato */
-.ctr{background:#fff;color:#111;font-family:'DM Sans',sans-serif;padding:34px 38px;border-radius:10px;font-size:12px;line-height:1.85}
+.ctr{background:#fff;color:#111;font-family:Arial,sans-serif;padding:34px 38px;border-radius:10px;font-size:12px;line-height:1.85}
 .ctr h1{font-size:13px;text-align:center;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:22px}
 .ctr h3{font-size:10px;font-weight:700;margin:16px 0 5px;text-transform:uppercase;letter-spacing:.4px;color:#333}
 .ctr p{font-size:11px;color:#333}
@@ -400,7 +406,7 @@ tr:hover td{background:var(--bg3)}
           <label style="margin:0;font-size:13px;color:var(--text2)">Desconto:</label>
           <input type="number" id="nos-desc" value="0" min="0" max="100" step="0.1" style="width:68px" oninput="calcNosTotal()">
           <span style="font-size:13px;color:var(--text2)">%</span>
-          <span style="font-size:12px;color:var(--danger);font-family:'DM Mono',monospace" id="nos-desc-v"></span>
+          <span style="font-size:12px;color:var(--danger);font-family:Arial,monospace" id="nos-desc-v"></span>
         </div>
         <div style="font-size:18px;font-weight:600;color:var(--accent)">Total: <span id="nos-total">R$ 0,00</span></div>
       </div>
@@ -453,7 +459,7 @@ tr:hover td{background:var(--bg3)}
           <label style="margin:0;font-size:13px;color:var(--text2)">Desconto:</label>
           <input type="number" id="eos-desc" value="0" min="0" max="100" step="0.1" style="width:68px" oninput="calcEosTotal()">
           <span style="font-size:13px;color:var(--text2)">%</span>
-          <span style="font-size:12px;color:var(--danger);font-family:'DM Mono',monospace" id="eos-desc-v"></span>
+          <span style="font-size:12px;color:var(--danger);font-family:Arial,monospace" id="eos-desc-v"></span>
         </div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:6px">Avulsos sem desconto: <strong id="eos-sub-av-s">R$ 0,00</strong></div>
         <div style="font-size:18px;font-weight:600;color:var(--accent)">Total: <span id="eos-total">R$ 0,00</span></div>
@@ -484,7 +490,8 @@ tr:hover td{background:var(--bg3)}
     </div>
     <!-- INFO -->
     <div id="vos-info">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <button class="btn btn-d btn-sm" onclick="excluirOS()">🗑️ Excluir OS</button>
         <button class="btn btn-g btn-sm" onclick="abrirEdicaoOS()">✏️ Editar OS</button>
       </div>
       <div class="g2" style="margin-bottom:16px">
@@ -831,10 +838,10 @@ function renderDashboard(){
   document.getElementById('dash-os-tbody').innerHTML=recentes.length?recentes.map(o=>{
     const c=cli(o.cliente_id);const{total}=osTotal(o);
     return`<tr>
-      <td><b style="font-family:'DM Mono',monospace">#${o.numero}</b></td>
+      <td><b style="font-family:Arial,monospace">#${o.numero}</b></td>
       <td>${c?c.nome:'—'}</td>
       <td style="font-size:12px">${fmtD(o.retirada)} → ${fmtD(o.devolucao)}</td>
-      <td style="font-family:'DM Mono',monospace">${fmt(total)}</td>
+      <td style="font-family:Arial,monospace">${fmt(total)}</td>
       <td>${pgBadge(o.pagamento)}</td>
       <td>${sbadge(o.status)}</td>
       <td><button class="btn btn-g btn-sm" onclick="verOS(${o.id})">Ver</button></td>
@@ -887,12 +894,12 @@ function renderOS(q){
     const c=cli(o.cliente_id);const{total}=osTotal(o);
     const pgAberto=o.pagamento==='em aberto'&&['alugado','reservado','pre_reserva'].includes(o.status);
     return`<tr style="${pgAberto?'background:rgba(255,184,74,.04)':''}">
-      <td><b style="font-family:'DM Mono',monospace">#${o.numero}</b></td>
+      <td><b style="font-family:Arial,monospace">#${o.numero}</b></td>
       <td>${c?c.nome:'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${o.atendente||'—'}</td>
       <td style="font-size:12px;white-space:nowrap">${fmtD(o.retirada)}</td>
       <td style="font-size:12px;white-space:nowrap">${fmtD(o.devolucao)}</td>
-      <td style="font-family:'DM Mono',monospace;font-weight:600">${fmt(total)}</td>
+      <td style="font-family:Arial,monospace;font-weight:600">${fmt(total)}</td>
       <td>${pgCell(o.pagamento)}</td>
       <td>${sbadge(o.status)}</td>
       <td style="font-size:12px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.comentario||''}</td>
@@ -1007,9 +1014,9 @@ function renderNosItens(){
     const e=eq(parseInt(id));if(!e)return'';
     return`<div class="os-row">
       <span style="font-size:12px">${e.nome}</span>
-      <span style="font-size:12px;font-family:'DM Mono',monospace">${v.qty}</span>
-      <span style="font-size:12px;font-family:'DM Mono',monospace">${fmt(e.diaria)}</span>
-      <span style="font-size:12px;font-family:'DM Mono',monospace">${fmt(e.diaria*v.qty*dias)}</span>
+      <span style="font-size:12px;font-family:Arial,monospace">${v.qty}</span>
+      <span style="font-size:12px;font-family:Arial,monospace">${fmt(e.diaria)}</span>
+      <span style="font-size:12px;font-family:Arial,monospace">${fmt(e.diaria*v.qty*dias)}</span>
       <button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:14px" onclick="adjQty('nos',${id},-999)">✕</button>
     </div>`;
   }).join(''):`<p style="font-size:12px;color:var(--text3);padding:10px 0">Nenhum item selecionado</p>`;
@@ -1069,6 +1076,7 @@ async function salvarOS(){
       job:document.getElementById('nos-job').value||'',
       retirada:ret,hora_retirada:'09:00',
       devolucao:dev,hora_devolucao:'18:00',
+      // Hora será definida ao confirmar reserva
       itens_avulsos:nosAvulsos,
       desconto:parseFloat(document.getElementById('nos-desc').value)||0,
       status:'pre_reserva',pagamento:'em aberto',
@@ -1104,7 +1112,7 @@ function verOS(id){
   const dias=calcDias(o.retirada,o.devolucao);
   document.getElementById('vos-itens').innerHTML=(o.itens||[]).map(i=>{
     const e=eq(i.equip_id);
-    return`<tr><td>${e?e.nome:'?'}</td><td>${i.qty}</td><td>${fmt(i.diaria)}</td><td>${dias}</td><td style="font-family:'DM Mono',monospace">${fmt(i.diaria*i.qty*dias)}</td></tr>`;
+    return`<tr><td>${e?e.nome:'?'}</td><td>${i.qty}</td><td>${fmt(i.diaria)}</td><td>${dias}</td><td style="font-family:Arial,monospace">${fmt(i.diaria*i.qty*dias)}</td></tr>`;
   }).join('');
   const av=o.itens_avulsos||[];
   document.getElementById('vos-avulsos').innerHTML=av.length?`
@@ -1112,7 +1120,7 @@ function verOS(id){
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Itens avulsos</div>
       ${av.map(a=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0">
         <span>${a.desc||'—'} <span style="font-size:11px;color:var(--text3)">${a.comDesconto?'(c/ desc.)':'(sem desc.)'}</span></span>
-        <span style="font-family:'DM Mono',monospace">${fmt(a.valor)}</span>
+        <span style="font-family:Arial,monospace">${fmt(a.valor)}</span>
       </div>`).join('')}
     </div>`:'';
   const{subEq,avD,avS,disc,total}=osTotal(o);
@@ -1137,13 +1145,34 @@ function updateVosPgtoEl(p){
 
 function renderStatusBtns(o){
   const todos=['pre_reserva','pendente','reservado','alugado','devolvido','emprestado','conserto','consertado','cancelado','vendido'];
-  document.getElementById('vos-status-btns').innerHTML=todos.map(s=>`
-    <button class="btn ${s===o.status?'btn-p':'btn-g'} btn-sm" onclick="setOsStatus('${s}')">${SL[s]}</button>
-  `).join('');
+  document.getElementById('vos-status-btns').innerHTML=todos.map(s=>{
+    let bloqueado=false,motivo='';
+    if(s==='alugado'&&o.pagamento!=='pago'){bloqueado=true;motivo='Confirme o pagamento primeiro';}
+    if(s==='devolvido'){
+      const dev=new Date(o.devolucao+'T'+(o.hora_devolucao||'18:00')+':00');
+      if(new Date()<new Date(dev.getTime()-3600000)){bloqueado=true;motivo=`Disponível a partir de ${fmtD(o.devolucao)}`;}
+    }
+    return`<button class="btn ${s===o.status?'btn-p':bloqueado?'btn-g':'btn-g'} btn-sm" 
+      onclick="setOsStatus('${s}')" 
+      style="${bloqueado?'opacity:.45;cursor:not-allowed':''}"
+      title="${motivo}">${SL[s]}${bloqueado?' 🔒':''}</button>`;
+  }).join('');
 }
 
 async function setOsStatus(s){
   const o=cache.os.find(x=>x.id===currentOSId);if(!o)return;
+  // Regras de fluxo
+  if(s==='alugado' && o.pagamento!=='pago'){
+    toast('⚠️ Confirme o pagamento antes de marcar como Alugado!','err');return;
+  }
+  if(s==='devolvido'){
+    const dev=new Date(o.devolucao+'T'+(o.hora_devolucao||'18:00')+':00');
+    const agora=new Date();
+    const umHoraAntes=new Date(dev.getTime()-3600000);
+    if(agora<umHoraAntes){
+      toast(`⚠️ Devolução só disponível a partir de ${fmtD(o.devolucao)} às ${o.hora_devolucao||'18:00'}!`,'err');return;
+    }
+  }
   const pgto=s==='emprestado'?'nao_aplicavel':o.pagamento;
   try{
     await sb('ordens_servico','PATCH',{status:s,pagamento:pgto},`?id=eq.${currentOSId}`);
@@ -1153,6 +1182,17 @@ async function setOsStatus(s){
     document.getElementById('vos-status-badge').textContent=SL[s];
     if(pgto!==o.pagamento){updateVosPgtoBadge(pgto);updateVosPgtoEl(pgto);document.getElementById('vos-pgto-sel').value=pgto;}
     toast('Status atualizado!');renderOS();renderDashboard();
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+async function excluirOS(){
+  const o=cache.os.find(x=>x.id===currentOSId);if(!o)return;
+  if(!confirm(`Excluir OS #${o.numero}? Esta ação não pode ser desfeita.`))return;
+  try{
+    await sb('os_itens','DELETE',null,`?os_id=eq.${currentOSId}`);
+    await sb('ordens_servico','DELETE',null,`?id=eq.${currentOSId}`);
+    cache.os=cache.os.filter(x=>x.id!==currentOSId);
+    closeM('m-ver-os');toast('OS excluída!');renderOS();renderDashboard();
   }catch(e){toast('Erro: '+e.message,'err');}
 }
 
@@ -1205,9 +1245,9 @@ function renderEosItens(){
     const e=eq(parseInt(id));if(!e)return'';
     return`<div class="os-row">
       <span style="font-size:12px">${e.nome}</span>
-      <span style="font-size:12px;font-family:'DM Mono',monospace">${v.qty}</span>
-      <span style="font-size:12px;font-family:'DM Mono',monospace">${fmt(e.diaria)}</span>
-      <span style="font-size:12px;font-family:'DM Mono',monospace">${fmt(e.diaria*v.qty*dias)}</span>
+      <span style="font-size:12px;font-family:Arial,monospace">${v.qty}</span>
+      <span style="font-size:12px;font-family:Arial,monospace">${fmt(e.diaria)}</span>
+      <span style="font-size:12px;font-family:Arial,monospace">${fmt(e.diaria*v.qty*dias)}</span>
       <button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:14px" onclick="adjQty('eos',${id},-999)">✕</button>
     </div>`;
   }).join(''):`<p style="font-size:12px;color:var(--text3);padding:10px 0">Nenhum item</p>`;
@@ -1290,7 +1330,7 @@ function renderClientes(q=''){
     const osCount=cache.os.filter(o=>o.cliente_id===c.id).length;
     return`<tr>
       <td><b>${c.nome}</b></td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${c.doc||'—'}</td>
+      <td style="font-family:Arial,monospace;font-size:12px">${c.doc||'—'}</td>
       <td>${c.tel||'—'}</td>
       <td>${c.email||'—'}</td>
       <td><span class="badge b-emprestado">${osCount} OS</span></td>
@@ -1353,7 +1393,7 @@ function verFicha(id){
   document.getElementById('ficha-nome').textContent=c.nome;
   document.getElementById('ficha-content').innerHTML=`
     <div class="g2" style="margin-bottom:18px">
-      <div><div style="font-size:11px;color:var(--text3)">CPF / CNPJ</div><div style="margin-top:3px;font-family:'DM Mono',monospace">${c.doc||'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--text3)">CPF / CNPJ</div><div style="margin-top:3px;font-family:Arial,monospace">${c.doc||'—'}</div></div>
       <div><div style="font-size:11px;color:var(--text3)">TELEFONE</div><div style="margin-top:3px">${c.tel||'—'}</div></div>
       <div><div style="font-size:11px;color:var(--text3)">E-MAIL</div><div style="margin-top:3px">${c.email||'—'}</div></div>
       <div><div style="font-size:11px;color:var(--text3)">ENDEREÇO</div><div style="margin-top:3px">${c.end||'—'}</div></div>
@@ -1368,9 +1408,9 @@ function verFicha(id){
     <tbody>${osDoCliente.length?osDoCliente.map(o=>{
       const{total}=osTotal(o);
       return`<tr>
-        <td><b style="font-family:'DM Mono',monospace">#${o.numero}</b></td>
+        <td><b style="font-family:Arial,monospace">#${o.numero}</b></td>
         <td style="font-size:12px">${fmtD(o.retirada)} → ${fmtD(o.devolucao)}</td>
-        <td style="font-family:'DM Mono',monospace">${fmt(total)}</td>
+        <td style="font-family:Arial,monospace">${fmt(total)}</td>
         <td>${pgBadge(o.pagamento)}</td>
         <td>${sbadge(o.status)}</td>
         <td><button class="btn btn-g btn-sm" onclick="closeM('m-ficha-cli');verOS(${o.id})">Ver</button></td>
@@ -1424,7 +1464,7 @@ function renderEqs(q=''){
         <span style="font-weight:500">${e.nome}</span>
         <span style="font-size:12px;color:var(--text2)">${e.marca||'—'}</span>
         <span><span class="badge b-emprestado">${e.cat}</span></span>
-        <span style="font-family:'DM Mono',monospace;color:var(--accent)">${fmt(e.diaria)}</span>
+        <span style="font-family:Arial,monospace;color:var(--accent)">${fmt(e.diaria)}</span>
         <span style="color:var(--text2)">${e.estoque} un.</span>
         <span style="font-size:11px;color:var(--text3)">${e.descricao||'—'}</span>
         <span style="display:flex;gap:6px">
@@ -1565,7 +1605,7 @@ function renderOSPreview(){
 function printOS(){
   const c=document.getElementById('osp-print');if(!c)return;
   const w=window.open('','_blank');
-  w.document.write(`<html><head><title>OS #${currentOS?.numero}</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:'DM Sans',sans-serif}body{background:#fff;padding:20px}${document.querySelector('style').textContent}</style></head><body>${c.outerHTML}</body></html>`);
+  w.document.write(`<html><head><title>OS #${currentOS?.numero}</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}body{background:#fff;padding:20px}${document.querySelector('style').textContent}</style></head><body>${c.outerHTML}</body></html>`);
   w.document.close();w.focus();setTimeout(()=>w.print(),400);
 }
 
@@ -1618,7 +1658,7 @@ function setCtr(type,el){
 function printCtr(){
   const c=document.getElementById('ctr-print');if(!c)return;
   const w=window.open('','_blank');
-  w.document.write(`<html><head><title>Contrato</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:'DM Sans',sans-serif}body{background:#fff;padding:32px}${document.querySelector('style').textContent}</style></head><body>${c.outerHTML}</body></html>`);
+  w.document.write(`<html><head><title>Contrato</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}body{background:#fff;padding:32px}${document.querySelector('style').textContent}</style></head><body>${c.outerHTML}</body></html>`);
   w.document.close();w.focus();setTimeout(()=>w.print(),400);
 }
 
@@ -1687,7 +1727,7 @@ function printChecklist(osId){
   const c=cli(o.cliente_id);const itens=o.itens||[];
   const w=window.open('','_blank');
   w.document.write(`<html><head><title>Checklist OS #${o.numero}</title><style>
-    *{box-sizing:border-box;margin:0;padding:0;font-family:'DM Sans',sans-serif}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
     body{background:#fff;padding:28px 32px;color:#111;font-size:12px}
     .hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #111}
     .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;padding:12px;background:#f8f8f8;border-radius:6px}
