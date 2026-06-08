@@ -238,6 +238,27 @@ tr:hover td{background:var(--bg3)}
 
 </head>
 <body>
+<!-- Modal novo/editar usuário -->
+<div id="m-novo-usuario" class="overlay">
+  <div class="modal" style="width:440px">
+    <div class="mh"><h2 id="usuario-modal-title">Novo usuário</h2><button class="mclose" onclick="closeM('m-novo-usuario')">✕</button></div>
+    <input type="hidden" id="usuario-edit-id">
+    <div class="fg"><label>Nome</label><input type="text" id="usuario-nome" placeholder="Nome do funcionário..."></div>
+    <div class="fg"><label>Senha</label><input type="password" id="usuario-senha" placeholder="Senha de acesso..."></div>
+    <div class="fg"><label>Função</label>
+      <select id="usuario-role">
+        <option value="atendente">🟢 Atendente</option>
+        <option value="supervisor">🔵 Supervisor</option>
+        <option value="admin">👑 Admin</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+      <button class="btn btn-g" onclick="closeM('m-novo-usuario')">Cancelar</button>
+      <button class="btn btn-p" onclick="salvarUsuario()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- TELA DE LOGIN -->
 <div id="login-screen" style="position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:36px 40px;width:380px;text-align:center">
@@ -269,6 +290,7 @@ tr:hover td{background:var(--bg3)}
       <div class="ni" onclick="go('orcamento')"><span class="icon">💬</span>Orçamento rápido</div>
       <div class="ni" onclick="go('analise')"><span class="icon">📊</span>Análise</div>
       <div class="ni" onclick="go('arquivo')"><span class="icon">🗄️</span>Arquivo</div>
+      <div class="ni" id="nav-usuarios" style="display:none" onclick="go('usuarios')"><span class="icon">👥</span>Usuários</div>
       <div class="ni" id="nav-importar" style="display:none" onclick="go('importar')"><span class="icon">📥</span>Importar histórico</div>
     </nav>
     <div class="sidebar-bottom">
@@ -569,6 +591,17 @@ tr:hover td{background:var(--bg3)}
       </div>
     </div>
 
+    <!-- GERENCIAR USUÁRIOS -->
+    <div id="page-usuarios" class="page">
+      <div class="ph"><h1>Usuários</h1>
+        <button class="btn btn-p" onclick="openM('m-novo-usuario')">+ Novo usuário</button>
+      </div>
+      <div class="card">
+        <table><thead><tr><th>Nome</th><th>Função</th><th>Status</th><th></th></tr></thead>
+        <tbody id="usuarios-tbody"></tbody></table>
+      </div>
+    </div>
+
     <!-- IMPORTAR HISTÓRICO -->
     <div id="page-importar" class="page">
       <div class="ph">
@@ -833,7 +866,7 @@ tr:hover td{background:var(--bg3)}
     <!-- INFO -->
     <div id="vos-info">
       <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-        <button class="btn btn-d btn-sm" onclick="excluirOS()">🗑️ Excluir OS</button>
+        <button class="btn btn-d btn-sm" id="btn-excluir-os" onclick="excluirOS()">🗑️ Excluir OS</button>
         <button class="btn btn-g btn-sm" onclick="abrirEdicaoOS()">✏️ Editar OS</button>
       </div>
       <div class="g2" style="margin-bottom:16px">
@@ -918,13 +951,14 @@ tr:hover td{background:var(--bg3)}
     <div class="fg"><label>Endereço</label><input type="text" id="cli-end"></div>
     <div class="g2">
       <div class="fg"><label>Status do cadastro</label>
-        <select id="cli-status">
+        <select id="cli-status" id="cli-status-sel">
           <option value="pendente">🔴 Pendente</option>
           <option value="analise">🟡 Em análise</option>
           <option value="aprovado" selected>🟢 Aprovado</option>
           <option value="confianca">⭐ De confiança</option>
           <option value="bloqueado">🔒 Bloqueado</option>
         </select>
+        <div id="cli-status-aviso" style="display:none;margin-top:4px;font-size:11px;color:var(--warning)">⚠️ Apenas Supervisor ou Admin pode aprovar/bloquear</div>
       </div>
       <div class="fg" style="display:flex;align-items:center;gap:8px;margin-top:20px">
         <input type="checkbox" id="cli-confianca" style="width:auto">
@@ -1096,10 +1130,21 @@ const USUARIOS = [
 ];
 let currentUser = null;
 
-function doLogin(){
+async function doLogin(){
   const nome=document.getElementById('login-user').value.trim();
   const senha=document.getElementById('login-pass').value;
-  const user=USUARIOS.find(u=>u.nome.toLowerCase()===nome.toLowerCase()&&u.senha===senha);
+  if(!nome||!senha){document.getElementById('login-err').style.display='block';return;}
+  // Tentar Supabase primeiro, depois fallback local
+  let user=null;
+  try{
+    const res=await sb('usuarios','GET',null,`?nome=ilike.${encodeURIComponent(nome)}&ativo=eq.true`);
+    if(res&&res.length){
+      const match=res.find(u=>u.senha===senha);
+      if(match)user={id:match.id,nome:match.nome,senha:match.senha,role:match.role,inicial:match.nome[0].toUpperCase()};
+    }
+  }catch(e){}
+  // Fallback local
+  if(!user)user=USUARIOS.find(u=>u.nome.toLowerCase()===nome.toLowerCase()&&u.senha===senha);
   if(!user){document.getElementById('login-err').style.display='block';return;}
   document.getElementById('login-err').style.display='none';
   currentUser=user;
@@ -1119,6 +1164,8 @@ function doLogin(){
   // Mostrar aba importar só para admin
   const navImp=document.getElementById('nav-importar');
   if(navImp)navImp.style.display=user.role==='admin'?'flex':'none';
+  const navUsers=document.getElementById('nav-usuarios');
+  if(navUsers)navUsers.style.display=user.role==='admin'?'flex':'none';
   init();
 }
 
@@ -1137,9 +1184,23 @@ function canDo(action){
   if(!currentUser)return false;
   const r=currentUser.role;
   if(r==='admin')return true;
-  if(r==='supervisor')return ['aprovar_cliente','desbloquear_os','ver_analise'].includes(action)?true:true;
-  // atendente pode tudo exceto ações administrativas
-  return !['aprovar_cliente','gerenciar_usuarios'].includes(action);
+  // Supervisor
+  if(r==='supervisor'){
+    const bloqueado=['gerenciar_usuarios','importar_historico','excluir_os_admin'];
+    return !bloqueado.includes(action);
+  }
+  // Atendente
+  const permitido=[
+    'criar_os','editar_os','ver_os','gerar_orcamento',
+    'ver_clientes','criar_cliente','analise_em_analise',
+    'fazer_checklist','editar_equipamentos','ver_analise',
+    'ver_arquivo','ver_disponibilidade','liberar_alugado'
+  ];
+  return permitido.includes(action);
+}
+
+function roleLabel(role){
+  return {admin:'👑 Admin',supervisor:'🔵 Supervisor',atendente:'🟢 Atendente'}[role]||role;
 }
 const SUPABASE_URL='https://bqqkplmfoumvjmwqwwgs.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxcWtwbG1mb3Vtdmptd3F3d2dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MTI0MDMsImV4cCI6MjA5NjA4ODQwM30.6_azTXQGfIvsqLxlyLeGDrmnCRmpZXMjln9CzezJ7Dg';
@@ -1566,6 +1627,95 @@ function onPeriodoChange(){
   renderAnalise();
 }
 
+// ===== GERENCIAR USUÁRIOS =====
+let usuariosCache = [];
+
+async function renderUsuarios(){
+  try{
+    const data=await sb('usuarios','GET',null,'?order=nome');
+    usuariosCache=data||[];
+    const tbody=document.getElementById('usuarios-tbody');
+    const roleLbls={admin:'👑 Admin',supervisor:'🔵 Supervisor',atendente:'🟢 Atendente'};
+    tbody.innerHTML=usuariosCache.length?usuariosCache.map(u=>`<tr style="${!u.ativo?'opacity:.5':''}">
+      <td><b>${u.nome}</b>${u.id===currentUser?.id?'<span style="font-size:11px;color:var(--accent);margin-left:6px">(você)</span>':''}</td>
+      <td><span class="badge ${u.role==='admin'?'b-alugado':u.role==='supervisor'?'b-reservado':'b-devolvido'}">${roleLbls[u.role]||u.role}</span></td>
+      <td><span class="badge ${u.ativo?'b-devolvido':'b-cancelado'}">${u.ativo?'Ativo':'Inativo'}</span></td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-g btn-sm" onclick="editarUsuario(${u.id})">✏️ Editar</button>
+        ${u.id!==currentUser?.id?`<button class="btn btn-${u.ativo?'d':'s'} btn-sm" onclick="toggleUsuario(${u.id},${!u.ativo})">${u.ativo?'Desativar':'Ativar'}</button>`:''}
+      </td>
+    </tr>`).join(''):`<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text3)">Nenhum usuário</td></tr>`;
+  }catch(e){toast('Erro ao carregar usuários: '+e.message,'err');}
+}
+
+function editarUsuario(id){
+  const u=usuariosCache.find(x=>x.id===id);if(!u)return;
+  document.getElementById('usuario-modal-title').textContent='Editar usuário';
+  document.getElementById('usuario-edit-id').value=id;
+  document.getElementById('usuario-nome').value=u.nome;
+  document.getElementById('usuario-senha').value='';
+  document.getElementById('usuario-role').value=u.role;
+  openM('m-novo-usuario');
+}
+
+async function salvarUsuario(){
+  const nome=document.getElementById('usuario-nome').value.trim();
+  const senha=document.getElementById('usuario-senha').value;
+  const role=document.getElementById('usuario-role').value;
+  if(!nome){toast('Informe o nome','err');return;}
+  const editId=parseInt(document.getElementById('usuario-edit-id').value);
+  try{
+    if(editId){
+      const upd={nome,role};
+      if(senha)upd.senha=senha;
+      await sb('usuarios','PATCH',upd,`?id=eq.${editId}`);
+      const u=usuariosCache.find(x=>x.id===editId);
+      if(u){u.nome=nome;u.role=role;if(senha)u.senha=senha;}
+      toast('Usuário atualizado!','ok');
+    }else{
+      if(!senha){toast('Informe a senha','err');return;}
+      const res=await sb('usuarios','POST',{nome,senha,role,ativo:true});
+      if(res&&res[0])usuariosCache.push(res[0]);
+      // Atualizar USUARIOS local
+      USUARIOS.push({id:res[0].id,nome,senha,role,inicial:nome[0].toUpperCase()});
+      toast('Usuário criado!','ok');
+    }
+    closeM('m-novo-usuario');
+    document.getElementById('usuario-edit-id').value='';
+    document.getElementById('usuario-modal-title').textContent='Novo usuário';
+    renderUsuarios();
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+async function toggleUsuario(id,ativar){
+  try{
+    await sb('usuarios','PATCH',{ativo:ativar},`?id=eq.${id}`);
+    const u=usuariosCache.find(x=>x.id===id);
+    if(u)u.ativo=ativar;
+    toast(ativar?'Usuário ativado!':'Usuário desativado!');
+    renderUsuarios();
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+// Atualizar doLogin para buscar usuários do Supabase
+async function doLoginSupabase(){
+  const nome=document.getElementById('login-user').value.trim();
+  const senha=document.getElementById('login-pass').value;
+  try{
+    const res=await sb('usuarios','GET',null,`?nome=eq.${encodeURIComponent(nome)}&senha=eq.${encodeURIComponent(senha)}&ativo=eq.true`);
+    if(!res||!res.length){
+      // Tentar nos usuários locais como fallback
+      const local=USUARIOS.find(u=>u.nome.toLowerCase()===nome.toLowerCase()&&u.senha===senha);
+      if(!local){document.getElementById('login-err').style.display='block';return;}
+      return local;
+    }
+    return {id:res[0].id,nome:res[0].nome,senha:res[0].senha,role:res[0].role,inicial:res[0].nome[0].toUpperCase()};
+  }catch(e){
+    // Fallback para usuários locais se Supabase falhar
+    return USUARIOS.find(u=>u.nome.toLowerCase()===nome.toLowerCase()&&u.senha===senha)||null;
+  }
+}
+
 function copiarAppsScript(){
   const code=document.getElementById('apps-script-code')?.textContent||'';
   navigator.clipboard.writeText(code).then(()=>toast('✅ Código copiado!','ok'));
@@ -1960,7 +2110,7 @@ function go(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
-  const idx={dashboard:0,os:1,disponibilidade:2,clientes:3,equipamentos:4,checklist:5,orcamento:6,analise:7,arquivo:8,importar:9};
+  const idx={dashboard:0,os:1,disponibilidade:2,clientes:3,equipamentos:4,checklist:5,orcamento:6,analise:7,arquivo:8,usuarios:9,importar:10};
   const niEls=document.querySelectorAll('.ni');
   if(niEls[idx[page]])niEls[idx[page]].classList.add('active');
   if(page==='dashboard')renderDashboard();
@@ -1968,6 +2118,7 @@ function go(page){
   if(page==='clientes')renderClientes('');
   if(page==='equipamentos')renderEqs('');
   if(page==='orcamento')initOrcamento();
+  if(page==='usuarios')renderUsuarios();
   if(page==='analise')renderAnalise();
   if(page==='arquivo')renderArquivo();
 }
@@ -2402,6 +2553,9 @@ function verOS(id){
   document.getElementById('vos-total').textContent=fmt(total);
   renderStatusBtns(o);
   vosTab('info',document.querySelector('#m-ver-os .tab'));
+  // Controlar visibilidade por role
+  const btnExcluir=document.getElementById('btn-excluir-os');
+  if(btnExcluir)btnExcluir.style.display=canDo('excluir_os_admin')?'inline-flex':'none';
   openM('m-ver-os');
 }
 
@@ -2832,7 +2986,13 @@ function editarCliente(id){
 async function salvarCliente(){
   const nome=document.getElementById('cli-nome').value.trim();
   if(!nome){toast('Informe o nome','err');return;}
-  const data={nome,doc:document.getElementById('cli-doc').value,tel:document.getElementById('cli-tel').value,email:document.getElementById('cli-email').value,endereco:document.getElementById('cli-end').value,status_cadastro:document.getElementById('cli-status').value,de_confianca:document.getElementById('cli-confianca').checked};
+  let statusCadastro=document.getElementById('cli-status').value;
+  // Atendente só pode colocar em análise, não aprovar/bloquear
+  if(!canDo('aprovar_cliente')&&['aprovado','confianca','bloqueado'].includes(statusCadastro)){
+    toast('⚠️ Apenas Supervisor ou Admin pode aprovar, marcar confiança ou bloquear clientes','err');
+    statusCadastro='analise'; // Forçar para em análise
+  }
+  const data={nome,doc:document.getElementById('cli-doc').value,tel:document.getElementById('cli-tel').value,email:document.getElementById('cli-email').value,endereco:document.getElementById('cli-end').value,status_cadastro:statusCadastro,de_confianca:document.getElementById('cli-confianca').checked&&canDo('aprovar_cliente')};
   const editId=parseInt(document.getElementById('cli-edit-id').value);
   try{
     if(editId){
