@@ -198,6 +198,7 @@ tr:hover td{background:var(--bg3)}
 .sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:36px}
 .sig-line{border-top:1px solid #aaa;padding-top:6px;font-size:10px;color:#666;text-align:center}
 /* Toast */
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border2);border-radius:9px;padding:12px 18px;font-size:13px;z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
 .toast.show{opacity:1;transform:translateY(0)}
 .toast.err{border-color:var(--danger);color:var(--danger)}
@@ -1577,11 +1578,36 @@ async function cancelarOsVencidas(){
 
 async function autoRefresh(){
   try{
-    const[os,itens]=await Promise.all([sb('ordens_servico','GET',null,'?order=numero.desc'),sb('os_itens','GET',null,'?select=*')]);
+    const cliAntes=cache.clientes.length;
+    const[os,itens,clientes]=await Promise.all([
+      sb('ordens_servico','GET',null,'?order=numero.desc'),
+      sb('os_itens','GET',null,'?select=*'),
+      sb('clientes','GET',null,'?order=nome')
+    ]);
     const itensMap={};(itens||[]).forEach(i=>{if(!itensMap[i.os_id])itensMap[i.os_id]=[];itensMap[i.os_id].push(i);});
     cache.os=(os||[]).map(o=>({...o,itens:itensMap[o.id]||[],itens_avulsos:o.itens_avulsos||[]}));
-    renderDashboard();renderOS();
+    const cliNovos=(clientes||[]).filter(c=>!cache.clientes.find(x=>x.id===c.id));
+    cache.clientes=clientes||[];
+    // Notificar novos cadastros
+    if(cliNovos.length>0){
+      cliNovos.forEach(c=>{
+        if(['pendente','analise'].includes(c.status_cadastro)){
+          notificacao(`👤 Novo cadastro: ${c.nome}`,()=>irParaPendentes());
+        }
+      });
+    }
+    renderDashboard();renderOS();renderClientes('');
   }catch(e){}
+}
+
+function notificacao(msg,onClick){
+  // Criar notificação no canto
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;top:20px;right:24px;background:var(--bg2);border:1px solid var(--success);border-radius:10px;padding:14px 18px;font-size:13px;z-index:999;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:slideIn .3s ease;max-width:300px';
+  div.innerHTML=`<div style="font-weight:600;color:var(--success);margin-bottom:4px">🔔 Novo cadastro</div><div style="color:var(--text2);font-size:12px">${msg}</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Clique para ver</div>`;
+  div.onclick=()=>{document.body.removeChild(div);if(onClick)onClick();};
+  document.body.appendChild(div);
+  setTimeout(()=>{if(document.body.contains(div))document.body.removeChild(div);},8000);
 }
 
 function setSyncStatus(s){
@@ -2499,35 +2525,58 @@ function verCadastroCompleto(cliId){
 }
 
 function verFicha(id){
-  const c=cli(id);if(!c)return;
+  const cObj=cli(id);if(!cObj)return;
   const osDoCliente=cache.os.filter(o=>o.cliente_id===id);
-  const totalGasto=osDoCliente.filter(o=>o.pagamento==='pago'&&!['conserto','consertado','vendido'].includes(o.status)).reduce((a,o)=>a+osTotal(o).total,0);
-  document.getElementById('ficha-nome').textContent=c.nome;
-  const statusCli2={pendente:'Pendente',analise:'Em analise',aprovado:'Aprovado',confianca:'De confianca',bloqueado:'Bloqueado'};
-  const scls2={pendente:'cs-pendente',analise:'cs-analise',aprovado:'cs-aprovado',confianca:'cs-confianca',bloqueado:'cs-bloqueado'};
-  const sc2=c.status_cadastro||'aprovado';
-  const temForms=CADASTROS_FORMS.some(x=>x.nome.toLowerCase().trim()===c.nome.toLowerCase().trim()||x.doc===c.doc);
-  const statusBar=document.getElementById('ficha-status-bar');
-  if(statusBar)statusBar.innerHTML=
-    '<div style="display:flex;align-items:center;gap:10px">'+
-    '<span style="font-size:12px;color:var(--text2)">Situacao cadastral:</span>'+
-    '<span class="cli-status '+scls2[sc2]+'" style="font-size:13px;padding:4px 12px">'+statusCli2[sc2]+'</span>'+
-    (c.de_confianca?'<span style="font-size:12px;color:var(--accent)">De confianca</span>':'')+
-    '</div>'+
-    (temForms?'<button class="btn btn-g btn-sm" onclick="verCadastroCompleto('+c.id+')">Cadastro completo</button>':'');
+  const totalGasto=osDoCliente.filter(o=>o.pagamento==='pago'&&!['conserto','consertado','vendido','cancelado'].includes(o.status)).reduce((a,o)=>a+osTotal(o).total,0);
+
+  // Buscar dados do Forms pelo nome ou doc
+  const formsData=CADASTROS_FORMS.find(f=>
+    f.nome.toLowerCase().trim()===cObj.nome.toLowerCase().trim()||
+    (f.doc&&cObj.doc&&f.doc.replace(/\D/g,'')===cObj.doc.replace(/\D/g,''))
+  );
+
+  const statusMap={pendente:'🔴 Pendente',analise:'🟡 Em análise',aprovado:'🟢 Aprovado',confianca:'⭐ De confiança',bloqueado:'🔒 Bloqueado'};
+  const statusCls={pendente:'cs-pendente',analise:'cs-analise',aprovado:'cs-aprovado',confianca:'cs-confianca',bloqueado:'cs-bloqueado'};
+  const sc=cObj.status_cadastro||'aprovado';
+
+  document.getElementById('ficha-nome').textContent=cObj.nome;
+
+  // Endereço: preferir do Forms, depois do banco
+  const endereco=formsData?.endereco||cObj.endereco||cObj.end||'—';
+  const email=formsData?.email||cObj.email||'—';
+  const tel=formsData?.tel||cObj.tel||'—';
+
   document.getElementById('ficha-content').innerHTML=`
-    <div class="g2" style="margin-bottom:18px">
-      <div><div style="font-size:11px;color:var(--text3)">CPF / CNPJ</div><div style="margin-top:3px;font-family:Arial,monospace">${c.doc||'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--text3)">TELEFONE</div><div style="margin-top:3px">${c.tel||'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--text3)">E-MAIL</div><div style="margin-top:3px">${c.email||'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--text3)">ENDEREÇO</div><div style="margin-top:3px">${c.end||'—'}</div></div>
+    <!-- Status cadastral -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 16px;background:var(--bg3);border-radius:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;color:var(--text2)">Situação cadastral:</span>
+        <span class="cli-status ${statusCls[sc]}" style="font-size:13px;padding:4px 12px">${statusMap[sc]||sc}</span>
+        ${cObj.de_confianca?'<span style="font-size:12px;color:var(--accent)">⭐ De confiança</span>':''}
+      </div>
+      <div style="display:flex;gap:8px">
+        ${formsData?`<button class="btn btn-g btn-sm" onclick="verCadastroCompleto(${id})">📋 Cadastro completo</button>`:''}
+        <button class="btn btn-g btn-sm" onclick="closeM('m-ficha-cli');editarCliente(${id})">✏️ Editar</button>
+      </div>
     </div>
-    <div id="ficha-status-bar" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 16px;background:var(--bg3);border-radius:10px"></div>
+    <!-- Dados básicos -->
+    <div class="g2" style="margin-bottom:16px">
+      <div><div style="font-size:11px;color:var(--text3)">CPF / CNPJ</div><div style="margin-top:3px;font-family:Arial,monospace">${cObj.doc||'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--text3)">TELEFONE</div><div style="margin-top:3px">${tel}</div></div>
+      <div><div style="font-size:11px;color:var(--text3)">E-MAIL</div><div style="margin-top:3px">${email}</div></div>
+      <div><div style="font-size:11px;color:var(--text3)">ENDEREÇO</div><div style="margin-top:3px">${endereco}</div></div>
+      ${formsData?.bairro?`<div><div style="font-size:11px;color:var(--text3)">BAIRRO</div><div style="margin-top:3px">${formsData.bairro}</div></div>`:''}
+      ${formsData?.cep?`<div><div style="font-size:11px;color:var(--text3)">CEP</div><div style="margin-top:3px">${formsData.cep}</div></div>`:''}
+      ${formsData?.profissao?`<div><div style="font-size:11px;color:var(--text3)">PROFISSÃO</div><div style="margin-top:3px">${formsData.profissao}</div></div>`:''}
+      ${formsData?.rede_social?`<div><div style="font-size:11px;color:var(--text3)">REDE SOCIAL</div><div style="margin-top:3px">${formsData.rede_social}</div></div>`:''}
+    </div>
+    <!-- Stats -->
     <div style="display:flex;gap:12px;margin-bottom:16px">
       <div class="stat" style="flex:1;padding:12px 16px"><div class="stat-lbl">Total de OS</div><div class="stat-val" style="font-size:20px">${osDoCliente.length}</div></div>
       <div class="stat" style="flex:1;padding:12px 16px"><div class="stat-lbl">Total gasto (pago)</div><div class="stat-val" style="font-size:16px;color:var(--success)">${fmt(totalGasto)}</div></div>
       <div class="stat" style="flex:1;padding:12px 16px"><div class="stat-lbl">Última locação</div><div class="stat-val" style="font-size:15px">${osDoCliente.length?fmtD(osDoCliente[0].retirada):'—'}</div></div>
     </div>
+    <!-- Histórico -->
     <h3 style="margin-bottom:10px">Histórico de locações</h3>
     <table><thead><tr><th>Nº OS</th><th>Período</th><th>Total</th><th>Pagamento</th><th>Status</th><th></th></tr></thead>
     <tbody>${osDoCliente.length?osDoCliente.map(o=>{
@@ -2545,7 +2594,7 @@ function verFicha(id){
   openM('m-ficha-cli');
 }
 
-// ===== EQUIPAMENTOS =====
+
 function atualizarFiltroMarca(){
   const marcas=[...new Set(cache.equipamentos.map(e=>e.marca).filter(Boolean))].sort();
   const sel=document.getElementById('eq-fil-marca');
