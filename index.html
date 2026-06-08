@@ -1666,7 +1666,7 @@ function renderLembretes(){
   }).length;
   const badge=document.getElementById('badge-pgto');
   if(badge){badge.textContent=pgAberto;badge.style.display=pgAberto>0?'inline':'none';}
-  const cliPendentes=cache.clientes.filter(c=>['pendente','analise'].includes(c.status_cadastro)).length;
+  // cliPendentes calculado no bloco de lembretes abaixo
   const preReservas=cache.os.filter(o=>o.status==='pre_reserva').length;
   const items=[];
   if(retProx)items.push(`<div class="lemb" style="background:rgba(74,184,255,.1);border-color:var(--accent)" onclick="setOsFilter('reservado',null);go('os')"><div class="lemb-n">${retProx}</div><div class="lemb-t">🔔 Retirada próxima (3 dias)</div></div>`);
@@ -1674,7 +1674,19 @@ function renderLembretes(){
   if(devProx)items.push(`<div class="lemb" style="background:rgba(255,184,74,.1);border-color:var(--warning)" onclick="setOsFilter('alugado',null);go('os')"><div class="lemb-n">${devProx}</div><div class="lemb-t">📦 Devolução próxima (3 dias)</div></div>`);
   if(pgAberto)items.push(`<div class="lemb" style="background:rgba(255,92,92,.1);border-color:var(--danger)" onclick="setPgtoFilter('em aberto',null);go('os')"><div class="lemb-n" style="color:var(--danger)">${pgAberto}</div><div class="lemb-t">💰 Pagamentos em aberto</div></div>`);
   if(preReservas)items.push(`<div class="lemb" style="background:rgba(184,74,255,.1);border-color:var(--purple)" onclick="setOsFilter('pre_reserva',null);go('os')"><div class="lemb-n" style="color:var(--purple)">${preReservas}</div><div class="lemb-t">📋 Pré-reservas</div></div>`);
-  if(cliPendentes)items.push(`<div class="lemb" style="background:rgba(184,74,255,.1);border-color:var(--purple)" onclick="go('clientes')"><div class="lemb-n" style="color:var(--purple)">${cliPendentes}</div><div class="lemb-t">👤 Cadastros pendentes</div></div>`);
+  // Clientes pendentes com nome do mais recente
+  const clisPendentes=cache.clientes.filter(c=>['pendente','analise'].includes(c.status_cadastro));
+  if(clisPendentes.length){
+    const ultimo=clisPendentes[clisPendentes.length-1];
+    items.push(`<div class="lemb" style="background:rgba(184,74,255,.15);border-color:var(--purple);position:relative" onclick="go('clientes')">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div class="lemb-n" style="color:var(--purple);font-size:18px">${clisPendentes.length}</div>
+        <div style="background:var(--purple);color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 7px">NOVO</div>
+      </div>
+      <div class="lemb-t" style="font-weight:600;color:var(--text)">👤 ${clisPendentes.length===1?ultimo.nome:clisPendentes.length+' cadastros pendentes'}</div>
+      <div class="lemb-t" style="margin-top:2px">${clisPendentes.length===1?'Aguardando aprovação':'Clique para ver todos'}</div>
+    </div>`);
+  }
   const grid = document.getElementById('lemb-grid');
   if(grid) grid.innerHTML = items.length ? items.join('') : '';
 }
