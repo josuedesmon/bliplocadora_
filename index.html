@@ -211,6 +211,8 @@ tr:hover td{background:var(--bg3)}
 .wpp-msg{background:#075e54;color:#fff;border-radius:10px;padding:14px 16px;font-size:13px;font-family:Arial,sans-serif;line-height:1.6;white-space:pre-wrap;margin-top:12px;position:relative}
 .wpp-copy{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer}
 .wpp-copy:hover{background:rgba(255,255,255,.3)}
+.empresa-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;background:rgba(74,184,255,.12);color:var(--accent);margin-left:6px}
+.contato-row{padding-left:20px;border-left:2px solid var(--border);margin-left:8px}
 .vtoggle{display:flex;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px}
 .vtbtn{padding:5px 11px;border-radius:6px;font-size:12px;cursor:pointer;border:none;background:transparent;color:var(--text2);transition:all .15s;font-weight:500}
 .vtbtn.active{background:var(--accent);color:#fff}
@@ -936,6 +938,23 @@ tr:hover td{background:var(--bg3)}
   </div>
 </div>
 
+<!-- Modal vincular empresa -->
+<div id="m-vincular-empresa" class="overlay">
+  <div class="modal" style="width:500px">
+    <div class="mh"><h2>Vincular a empresa</h2><button class="mclose" onclick="closeM('m-vincular-empresa')">✕</button></div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Selecione a empresa à qual este cliente pertence como contato.</p>
+    <div class="fg">
+      <label>Buscar empresa (CNPJ)</label>
+      <input type="text" id="vincular-search" placeholder="Digite o nome da empresa..." oninput="filtrarEmpresas(this.value)">
+    </div>
+    <div id="vincular-lista" style="max-height:260px;overflow-y:auto;margin-bottom:16px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-g" onclick="closeM('m-vincular-empresa')">Cancelar</button>
+      <button class="btn btn-d btn-sm" onclick="desvincularEmpresa()">Desvincular</button>
+    </div>
+  </div>
+</div>
+
 <!-- Cadastro completo -->
 <div id="m-cadastro-completo" class="overlay">
   <div class="modal" style="width:820px">
@@ -1462,6 +1481,70 @@ function renderArquivo(q=''){
       <td><button class="btn btn-g btn-sm" onclick="verOS(${o.id})">Ver</button></td>
     </tr>`;
   }).join(''):`<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma OS no arquivo</td></tr>`;
+}
+
+// ===== HIERARQUIA DE CLIENTES =====
+let vincularCliId = null;
+
+function abrirVincularEmpresa(id){
+  vincularCliId = id;
+  document.getElementById('vincular-search').value = '';
+  filtrarEmpresas('');
+  openM('m-vincular-empresa');
+}
+
+function filtrarEmpresas(q){
+  // Listar apenas clientes com CNPJ (empresas) exceto o próprio cliente
+  const empresas = cache.clientes.filter(c => {
+    if(c.id === vincularCliId) return false;
+    const doc = (c.doc||'').replace(/\D/g,'');
+    return doc.length === 14; // CNPJ tem 14 dígitos
+  }).filter(c => !q || c.nome.toLowerCase().includes(q.toLowerCase()));
+
+  // Se não houver nenhum com CNPJ, mostrar todos exceto o próprio
+  const lista = empresas.length > 0 ? empresas :
+    cache.clientes.filter(c => c.id !== vincularCliId && (!q || c.nome.toLowerCase().includes(q.toLowerCase())));
+
+  const el = document.getElementById('vincular-lista');
+  if(!lista.length){
+    el.innerHTML = '<p style="text-align:center;color:var(--text3);padding:20px;font-size:13px">Nenhuma empresa encontrada</p>';
+    return;
+  }
+  el.innerHTML = lista.map(emp => {
+    const contatos = cache.clientes.filter(c => c.empresa_id === emp.id);
+    const cliAtual = cli(vincularCliId);
+    const jaVinculado = cliAtual?.empresa_id === emp.id;
+    return`<div onclick="vincularAEmpresa(${emp.id})" style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:8px;margin-bottom:4px;transition:background .15s;${jaVinculado?'background:rgba(74,184,255,.08);border:1px solid var(--accent)':''}" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='${jaVinculado?'rgba(74,184,255,.08)':''}'" >
+      <div style="font-weight:500;font-size:13px">${emp.nome} ${jaVinculado?'<span style="font-size:11px;color:var(--accent)">(atual)</span>':''}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">${emp.doc||'—'} · ${contatos.length} contato(s) vinculado(s)</div>
+    </div>`;
+  }).join('');
+}
+
+async function vincularAEmpresa(empresaId){
+  const cliObj = cli(vincularCliId);
+  if(!cliObj) return;
+  try{
+    await sb('clientes','PATCH',{empresa_id:empresaId},`?id=eq.${vincularCliId}`);
+    cliObj.empresa_id = empresaId;
+    closeM('m-vincular-empresa');
+    toast(`✅ ${cliObj.nome} vinculado à ${cli(empresaId)?.nome}!`,'ok');
+    // Reabrir ficha
+    setTimeout(()=>verFicha(vincularCliId),200);
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+async function desvincularEmpresa(){
+  const cliObj = cli(vincularCliId);
+  if(!cliObj||!cliObj.empresa_id) return;
+  if(!confirm('Desvincular este cliente da empresa?')) return;
+  try{
+    await sb('clientes','PATCH',{empresa_id:null},`?id=eq.${vincularCliId}`);
+    cliObj.empresa_id = null;
+    closeM('m-vincular-empresa');
+    toast('Desvinculado!');
+    setTimeout(()=>verFicha(vincularCliId),200);
+  }catch(e){toast('Erro: '+e.message,'err');}
 }
 
 function onPeriodoChange(){
@@ -2718,7 +2801,7 @@ function renderClientes(q=''){
     const statusCls2={pendente:'cs-pendente',analise:'cs-analise',aprovado:'cs-aprovado',confianca:'cs-confianca',bloqueado:'cs-bloqueado'};
     const sc2=c.status_cadastro||'aprovado';
     return`<tr style="${['pendente','analise'].includes(sc2)?'background:rgba(74,255,140,.02)':''}">
-      <td><b style="cursor:pointer" onclick="verFicha(${c.id})">${c.nome}</b>${c.de_confianca?'<span style="font-size:10px;color:var(--accent);margin-left:6px">⭐</span>':''}</td>
+      <td><b style="cursor:pointer" onclick="verFicha(${c.id})">${c.nome}</b>${c.de_confianca?'<span style="font-size:10px;color:var(--accent);margin-left:6px">⭐</span>':''}${c.empresa_id?`<span class="empresa-badge">🏢 ${cli(c.empresa_id)?.nome||'?'}</span>`:''}</td>
       <td style="font-family:Arial,monospace;font-size:12px">${c.doc||'—'}</td>
       <td>${c.tel||'—'}</td>
       <td><span class="cli-status ${statusCls2[sc2]}">${statusMap2[sc2]||sc2}</span></td>
@@ -2827,6 +2910,7 @@ function verFicha(id){
       </div>
       <div style="display:flex;gap:8px">
         ${formsData?`<button class="btn btn-g btn-sm" onclick="verCadastroCompleto(${id})">📋 Cadastro completo</button>`:''}
+        <button class="btn btn-g btn-sm" onclick="abrirVincularEmpresa(${id})">🏢 Vincular empresa</button>
         <button class="btn btn-g btn-sm" onclick="closeM('m-ficha-cli');editarCliente(${id})">✏️ Editar</button>
       </div>
     </div>
@@ -2836,6 +2920,7 @@ function verFicha(id){
       <div><div style="font-size:11px;color:var(--text3)">TELEFONE</div><div style="margin-top:3px">${tel}</div></div>
       <div><div style="font-size:11px;color:var(--text3)">E-MAIL</div><div style="margin-top:3px">${email}</div></div>
       <div><div style="font-size:11px;color:var(--text3)">ENDEREÇO</div><div style="margin-top:3px">${endereco}</div></div>
+      ${cObj.empresa_id?`<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--text3)">EMPRESA VINCULADA</div><div style="margin-top:3px;display:flex;align-items:center;gap:8px"><span class="empresa-badge">🏢 ${cli(cObj.empresa_id)?.nome||'—'}</span><button class="btn btn-g btn-sm" onclick="abrirVincularEmpresa(${cObj.id})">Alterar</button></div></div>`:''}
       ${formsData?.bairro?`<div><div style="font-size:11px;color:var(--text3)">BAIRRO</div><div style="margin-top:3px">${formsData.bairro}</div></div>`:''}
       ${formsData?.cep?`<div><div style="font-size:11px;color:var(--text3)">CEP</div><div style="margin-top:3px">${formsData.cep}</div></div>`:''}
       ${formsData?.profissao?`<div><div style="font-size:11px;color:var(--text3)">PROFISSÃO</div><div style="margin-top:3px">${formsData.profissao}</div></div>`:''}
@@ -2848,6 +2933,32 @@ function verFicha(id){
       <div class="stat" style="flex:1;padding:12px 16px"><div class="stat-lbl">Última locação</div><div class="stat-val" style="font-size:15px">${osDoCliente.length?fmtD(osDoCliente[0].retirada):'—'}</div></div>
     </div>
     <!-- Histórico -->
+    <!-- Contatos vinculados (se for empresa) -->
+    ${(()=>{
+      const contatos=cache.clientes.filter(x=>x.empresa_id===cObj.id);
+      if(!contatos.length)return'';
+      return`<div style="margin-bottom:16px;padding:14px;background:var(--bg3);border-radius:10px">
+        <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:10px">🏢 Contatos vinculados (${contatos.length})</div>
+        ${contatos.map(ct=>{
+          const osct=cache.os.filter(o=>o.cliente_id===ct.id);
+          const fatct=osct.filter(o=>o.pagamento==='pago'&&!['cancelado','conserto','consertado','vendido'].includes(o.status)).reduce((a,o)=>a+osTotal(o).total,0);
+          return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)" >
+            <div>
+              <span style="font-size:13px;font-weight:500;cursor:pointer;color:var(--accent)" onclick="closeM('m-ficha-cli');setTimeout(()=>verFicha(${ct.id}),100)">${ct.nome}</span>
+              <span style="font-size:11px;color:var(--text3);margin-left:8px">${ct.doc||''}</span>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:12px;color:var(--text2)">${osct.length} OS</div>
+              <div style="font-size:12px;color:var(--success)">${fmt(fatct)}</div>
+            </div>
+          </div>`;
+        }).join('')}
+        <div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:600">
+          <span style="font-size:13px">Total da empresa</span>
+          <span style="color:var(--success)">${fmt(contatos.reduce((a,ct)=>a+cache.os.filter(o=>o.cliente_id===ct.id&&o.pagamento==='pago'&&!['cancelado','conserto','consertado','vendido'].includes(o.status)).reduce((b,o)=>b+osTotal(o).total,0),0)+totalGasto)}</span>
+        </div>
+      </div>`;
+    })()}
     <h3 style="margin-bottom:10px">Histórico de locações</h3>
     <table><thead><tr><th>Nº OS</th><th>Período</th><th>Total</th><th>Pagamento</th><th>Status</th><th></th></tr></thead>
     <tbody>${osDoCliente.length?osDoCliente.map(o=>{
