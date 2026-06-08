@@ -373,7 +373,7 @@ tr:hover td{background:var(--bg3)}
         </select>
         <button class="btn btn-g btn-sm" onclick="limparFiltrosCli()">Limpar</button>
       </div>
-      <div class="card"><table><thead><tr><th>Nome</th><th>CPF / CNPJ</th><th>Telefone</th><th>E-mail</th><th>OS</th><th>Status</th><th></th></tr></thead>
+      <div class="card"><table><thead><tr><th>Nome</th><th>CPF / CNPJ</th><th>Telefone</th><th>Status</th><th>OS</th><th></th></tr></thead>
       <tbody id="cli-tbody"></tbody></table></div>
     </div>
 
@@ -1699,7 +1699,7 @@ function renderLembretes(){
   const clisPendentes=cache.clientes.filter(c=>['pendente','analise'].includes(c.status_cadastro));
   if(clisPendentes.length){
     const ultimo=clisPendentes[clisPendentes.length-1];
-    items.push(`<div class="lemb" style="background:rgba(184,74,255,.15);border-color:var(--purple);position:relative" onclick="go('clientes')">
+    items.push(`<div class="lemb" style="background:rgba(184,74,255,.15);border-color:var(--purple);position:relative" onclick="irParaPendentes()">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <div class="lemb-n" style="color:var(--success);font-size:18px">${clisPendentes.length}</div>
         <div style="background:var(--success);color:#000;border-radius:20px;font-size:10px;font-weight:700;padding:1px 7px">NOVO</div>
@@ -2047,10 +2047,7 @@ function renderStatusBtns(o){
   const todos=['pre_reserva','pendente','reservado','alugado','devolvido','emprestado','conserto','consertado','cancelado','vendido'];
   document.getElementById('vos-status-btns').innerHTML=todos.map(s=>{
     let bloqueado=false,motivo='';
-    if(s==='alugado'&&o.status==='emprestado'){bloqueado=true;motivo='Equipamento emprestado — use Devolvido para registrar a volta';}
-    if(s==='alugado'&&o.pagamento!=='pago'&&o.status!=='emprestado'){bloqueado=true;motivo='Confirme o pagamento primeiro';}
-    const cliObj=cli(o.cliente_id);
-    if(s==='alugado'&&!o.contrato_assinado&&(!cliObj||!cliObj.de_confianca)&&o.status!=='emprestado'){bloqueado=true;motivo='Assine o contrato primeiro';}
+    if(s==='alugado'&&o.status==='emprestado'){bloqueado=true;motivo='Emprestado — use Devolvido para registrar a volta';}
     if(s==='alugado'&&!o.contrato_assinado){
       const cliObj=cli(o.cliente_id);
       if(!cliObj||!cliObj.de_confianca){bloqueado=true;motivo='Assine o contrato primeiro';}
@@ -2069,14 +2066,15 @@ function renderStatusBtns(o){
 async function setOsStatus(s){
   const o=cache.os.find(x=>x.id===currentOSId);if(!o)return;
   // Regras de fluxo
-  if(s==='alugado' && o.pagamento!=='pago'){
-    toast('⚠️ Confirme o pagamento antes de marcar como Alugado!','err');return;
-  }
-  if(s==='alugado' && !o.contrato_assinado){
-    // Verificar se cliente é de confiança
+  if(s==='alugado'){
     const cliObj=cli(o.cliente_id);
-    if(!cliObj||!cliObj.de_confianca){
-      toast('⚠️ O contrato precisa estar assinado antes de marcar como Alugado!','err');return;
+    const ehConfianca=cliObj&&cliObj.de_confianca;
+    if(!ehConfianca && o.pagamento!=='pago'){
+      // Oferecer opção de liberar na confiança
+      if(!confirm('⚠️ Pagamento ainda em aberto!\n\nDeseja liberar na confiança mesmo assim?'))return;
+    }
+    if(!ehConfianca && !o.contrato_assinado){
+      if(!confirm('⚠️ Contrato não assinado!\n\nDeseja liberar na confiança mesmo assim?'))return;
     }
   }
   if(s==='alugado' && !o.contrato_assinado){
@@ -2402,6 +2400,14 @@ function renderAvail(){
 }
 
 // ===== CLIENTES =====
+function irParaPendentes(){
+  go('clientes');
+  setTimeout(()=>{
+    const fil=document.getElementById('cli-fil-status');
+    if(fil){fil.value='pendente';renderClientes('');}
+  },100);
+}
+
 function limparFiltrosCli(){
   const inp=document.getElementById('cli-search-input');if(inp)inp.value='';
   const fil=document.getElementById('cli-fil-status');if(fil)fil.value='';
