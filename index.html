@@ -510,13 +510,19 @@ tr:hover td{background:var(--bg3)}
     <!-- ANÁLISE -->
     <div id="page-analise" class="page">
       <div class="ph"><h1>Análise</h1>
-        <div style="display:flex;gap:8px;align-items:center">
-          <select id="analise-periodo" onchange="renderAnalise()" style="width:auto;padding:6px 10px;font-size:12px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="analise-periodo" onchange="onPeriodoChange()" style="width:auto;padding:6px 10px;font-size:12px">
             <option value="mes">Este mês</option>
             <option value="trimestre">Últimos 3 meses</option>
             <option value="ano">Este ano</option>
+            <option value="custom">Período personalizado</option>
             <option value="tudo">Tudo</option>
           </select>
+          <div id="analise-custom-dates" style="display:none;gap:8px;align-items:center">
+            <input type="date" id="analise-data-ini" onchange="renderAnalise()" style="width:auto;padding:5px 10px;font-size:12px">
+            <span style="font-size:12px;color:var(--text2)">até</span>
+            <input type="date" id="analise-data-fim" onchange="renderAnalise()" style="width:auto;padding:5px 10px;font-size:12px">
+          </div>
         </div>
       </div>
       <!-- Stats gerais -->
@@ -1292,9 +1298,20 @@ function renderAnalise(){
     if(!os.retirada)return false;
     if(['conserto','consertado','vendido','emprestado'].includes(os.status))return false;
     const d=new Date(os.retirada);
-    if(periodo==='mes')return d.getMonth()===agora.getMonth()&&d.getFullYear()===agora.getFullYear();
-    if(periodo==='trimestre'){const t=new Date(agora);t.setMonth(t.getMonth()-3);return d>=t;}
-    if(periodo==='ano')return d.getFullYear()===agora.getFullYear();
+    if(periodo==='mes'){
+      // Começa no dia 1 do mês atual
+      const ini=new Date(agora.getFullYear(),agora.getMonth(),1);
+      const fim=new Date(agora.getFullYear(),agora.getMonth()+1,0,23,59,59);
+      return d>=ini&&d<=fim;
+    }
+    if(periodo==='trimestre'){const t=new Date(agora);t.setMonth(t.getMonth()-3);t.setDate(1);return d>=t;}
+    if(periodo==='ano'){const ini=new Date(agora.getFullYear(),0,1);return d>=ini;}
+    if(periodo==='custom'){
+      const ini=document.getElementById('analise-data-ini')?.value;
+      const fim=document.getElementById('analise-data-fim')?.value;
+      if(!ini||!fim)return true;
+      return d>=new Date(ini)&&d<=new Date(fim+'T23:59:59');
+    }
     return true;
   };
 
@@ -1445,6 +1462,25 @@ function renderArquivo(q=''){
       <td><button class="btn btn-g btn-sm" onclick="verOS(${o.id})">Ver</button></td>
     </tr>`;
   }).join(''):`<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma OS no arquivo</td></tr>`;
+}
+
+function onPeriodoChange(){
+  const periodo=document.getElementById('analise-periodo')?.value;
+  const customDiv=document.getElementById('analise-custom-dates');
+  if(customDiv){
+    customDiv.style.display=periodo==='custom'?'flex':'none';
+    if(periodo==='custom'){
+      // Preencher datas padrão: início do mês até hoje
+      const agora=new Date();
+      const ini=new Date(agora.getFullYear(),agora.getMonth(),1).toISOString().split('T')[0];
+      const fim=agora.toISOString().split('T')[0];
+      const iniEl=document.getElementById('analise-data-ini');
+      const fimEl=document.getElementById('analise-data-fim');
+      if(iniEl&&!iniEl.value)iniEl.value=ini;
+      if(fimEl&&!fimEl.value)fimEl.value=fim;
+    }
+  }
+  renderAnalise();
 }
 
 function copiarAppsScript(){
@@ -1934,7 +1970,7 @@ function renderLembretes(){
   }).length;
   const badge=document.getElementById('badge-pgto');
   if(badge){badge.textContent=pgAberto;badge.style.display=pgAberto>0?'inline':'none';}
-  // cliPendentes calculado no bloco de lembretes abaixo
+  // status calculado no bloco de lembretes
   const preReservas=cache.os.filter(o=>o.status==='pre_reserva').length;
   const items=[];
   if(retProx)items.push(`<div class="lemb" style="background:rgba(74,184,255,.1);border-color:var(--accent)" onclick="setOsFilter('reservado',null);go('os')"><div class="lemb-n">${retProx}</div><div class="lemb-t">🔔 Retirada próxima (3 dias)</div></div>`);
@@ -1943,16 +1979,23 @@ function renderLembretes(){
   if(pgAberto)items.push(`<div class="lemb" style="background:rgba(255,92,92,.1);border-color:var(--danger)" onclick="setPgtoFilter('em aberto',null);go('os')"><div class="lemb-n" style="color:var(--danger)">${pgAberto}</div><div class="lemb-t">💰 Pagamentos em aberto</div></div>`);
   if(preReservas)items.push(`<div class="lemb" style="background:rgba(184,74,255,.1);border-color:var(--purple)" onclick="setOsFilter('pre_reserva',null);go('os')"><div class="lemb-n" style="color:var(--purple)">${preReservas}</div><div class="lemb-t">📋 Pré-reservas</div></div>`);
   // Clientes pendentes com nome do mais recente
-  const clisPendentes=cache.clientes.filter(c=>['pendente','analise'].includes(c.status_cadastro));
+  const clisPendentes=cache.clientes.filter(c=>c.status_cadastro==='pendente');
+  const clisAnalise=cache.clientes.filter(c=>c.status_cadastro==='analise');
   if(clisPendentes.length){
     const ultimo=clisPendentes[clisPendentes.length-1];
-    items.push(`<div class="lemb" style="background:rgba(184,74,255,.15);border-color:var(--purple);position:relative" onclick="irParaPendentes()">
+    items.push(`<div class="lemb" style="background:rgba(74,255,140,.12);border-color:var(--success);cursor:pointer" onclick="irParaStatus('pendente')">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <div class="lemb-n" style="color:var(--success);font-size:18px">${clisPendentes.length}</div>
         <div style="background:var(--success);color:#000;border-radius:20px;font-size:10px;font-weight:700;padding:1px 7px">NOVO</div>
       </div>
-      <div class="lemb-t" style="font-weight:600;color:var(--text)">👤 ${clisPendentes.length===1?ultimo.nome:clisPendentes.length+' cadastros pendentes'}</div>
-      <div class="lemb-t" style="margin-top:2px">${clisPendentes.length===1?'Aguardando aprovação':'Clique para ver todos'}</div>
+      <div class="lemb-t" style="font-weight:600;color:var(--text)">👤 ${clisPendentes.length===1?ultimo.nome:'Cadastros pendentes'}</div>
+      <div class="lemb-t" style="margin-top:2px">Aguardando aprovação</div>
+    </div>`);
+  }
+  if(clisAnalise.length){
+    items.push(`<div class="lemb" style="background:rgba(255,184,74,.1);border-color:var(--warning);cursor:pointer" onclick="irParaStatus('analise')">
+      <div class="lemb-n" style="color:var(--warning)">${clisAnalise.length}</div>
+      <div class="lemb-t">🟡 Em análise</div>
     </div>`);
   }
   const grid = document.getElementById('lemb-grid');
