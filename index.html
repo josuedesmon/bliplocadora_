@@ -2427,10 +2427,14 @@ function renderAvail(){
 
 // ===== CLIENTES =====
 function irParaPendentes(){
+  irParaStatus('pendente');
+}
+
+function irParaStatus(status){
   go('clientes');
   setTimeout(()=>{
     const fil=document.getElementById('cli-fil-status');
-    if(fil){fil.value='pendente';renderClientes('');}
+    if(fil){fil.value=status;renderClientes('');}
   },100);
 }
 
@@ -2446,11 +2450,14 @@ function renderClientes(q=''){
   if(filStatus)list=list.filter(c=>(c.status_cadastro||'aprovado')===filStatus);
   document.getElementById('cli-tbody').innerHTML=list.length?list.map(c=>{
     const osCount=cache.os.filter(o=>o.cliente_id===c.id).length;
-    return`<tr>
-      <td><b>${c.nome}</b></td>
+    const statusMap2={pendente:'🔴 Pendente',analise:'🟡 Em análise',aprovado:'🟢 Aprovado',confianca:'⭐ Confiança',bloqueado:'🔒 Bloqueado'};
+    const statusCls2={pendente:'cs-pendente',analise:'cs-analise',aprovado:'cs-aprovado',confianca:'cs-confianca',bloqueado:'cs-bloqueado'};
+    const sc2=c.status_cadastro||'aprovado';
+    return`<tr style="${['pendente','analise'].includes(sc2)?'background:rgba(74,255,140,.02)':''}">
+      <td><b style="cursor:pointer" onclick="verFicha(${c.id})">${c.nome}</b>${c.de_confianca?'<span style="font-size:10px;color:var(--accent);margin-left:6px">⭐</span>':''}</td>
       <td style="font-family:Arial,monospace;font-size:12px">${c.doc||'—'}</td>
       <td>${c.tel||'—'}</td>
-      <td>${c.email||'—'}</td>
+      <td><span class="cli-status ${statusCls2[sc2]}">${statusMap2[sc2]||sc2}</span></td>
       <td><span class="badge b-emprestado">${osCount} OS</span></td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-g btn-sm" onclick="verFicha(${c.id})">👁 Ficha</button>
