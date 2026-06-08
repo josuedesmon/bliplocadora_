@@ -961,7 +961,7 @@ async function iniciarImportacao(){
     try{
       const res=await sb('clientes','POST',{
         nome:cli.nome,doc:cli.doc||'',tel:cli.tel||'',
-        email:cli.email||'',end:cli.end||'',
+        email:cli.email||'',endereco:cli.end||'',
         status_cadastro:'aprovado',de_confianca:false
       });
       if(res&&res[0]){ cache.clientes.push(res[0]);okCli++; }
@@ -1736,7 +1736,7 @@ function editarCliente(id){
 async function salvarCliente(){
   const nome=document.getElementById('cli-nome').value.trim();
   if(!nome){toast('Informe o nome','err');return;}
-  const data={nome,doc:document.getElementById('cli-doc').value,tel:document.getElementById('cli-tel').value,email:document.getElementById('cli-email').value,end:document.getElementById('cli-end').value,status_cadastro:document.getElementById('cli-status').value,de_confianca:document.getElementById('cli-confianca').checked};
+  const data={nome,doc:document.getElementById('cli-doc').value,tel:document.getElementById('cli-tel').value,email:document.getElementById('cli-email').value,endereco:document.getElementById('cli-end').value,status_cadastro:document.getElementById('cli-status').value,de_confianca:document.getElementById('cli-confianca').checked};
   const editId=parseInt(document.getElementById('cli-edit-id').value);
   try{
     if(editId){
