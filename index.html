@@ -3334,38 +3334,132 @@ function setCtr(type,el){
   const hoje=fmtD(new Date().toISOString().split('T')[0]);
   let html='';
   if(type==='continuo'){
+    const docTipoCtr=c&&c.doc?(c.doc.replace(/[^0-9]/g,'').length<=11?'CPF':'CNPJ'):'CPF';
     html=`<div class="ctr" id="ctr-print">
-      <h1>Contrato Contínuo de Locações de Bens Móveis</h1>
-      <h3>Partes</h3>
-      <p><strong>LOCADORA:</strong> BLIP PRODUTORA AUDIOVISUAL LTDA, CNPJ: 53.049.041/0001-39, Av. Embaixador Abelardo Bueno, nº 1, Bloco A, Sala 511, Barra da Tijuca, Rio de Janeiro/RJ.</p>
-      <p style="margin-top:8px"><strong>LOCATÁRIO:</strong> <strong>${c?c.nome:'___'}</strong>${c&&c.doc?`, ${c.doc.replace(/[^0-9]/g,'').length<=11?'CPF':'CNPJ'}: <strong>${c.doc}</strong>`:''}, endereço: <strong>${c?c.end:'___'}</strong>.</p>
-      <h3>1) Objeto</h3><p>Locação de equipamentos conforme Ordens de Serviço emitidas durante o período contratual.</p>
-      <h3>2) Validade</h3><p>Válido por 24 meses a contar da assinatura, com renovação automática.</p>
-      <h3>3) Danos e Seguro</h3><p>O locatário deve devolver os equipamentos nas mesmas condições. Em caso de perda ou dano, responde pelo valor de reposição do equipamento novo importado.</p>
-      <h3>4) Inadimplência</h3><p>Em caso de inadimplência, os valores serão acrescidos de juros legais, multa de 10% e honorários advocatícios de 20%.</p>
-      <h3>5) Proteção de Dados</h3><p>Os dados coletados são usados exclusivamente para fins de faturamento e, se necessário, cobrança judicial, em conformidade com a LGPD.</p>
-      <h3>6) Disposições Finais</h3><p>Regido pelo Código Civil Brasileiro. Foro: comarca da Locadora.</p>
-      <p style="margin-top:18px;text-align:right">Rio de Janeiro, ${hoje}</p>
-      <div class="sig-grid" style="margin-top:32px">
-        <div class="sig-line">Locadora — BLIP PRODUTORA AUDIOVISUAL LTDA</div>
-        <div class="sig-line">Locatário — ${c?c.nome:'___'}</div>
+      <h1 style="text-align:center">CONTRATO CONTÍNUO DE LOCAÇÕES DE BENS MÓVEIS</h1>
+
+      <h3>PARTES</h3>
+      <p><strong>LOCADORA:</strong> BLIP PRODUTORA AUDIOVISUAL LTDA, empresa privada, devidamente inscrita no CNPJ sob o n<sup>o</sup>: 53.049.041/0001-39, com sede com sede na Avenida Embaixador Abelardo Bueno, nº 1, Bloco A, Sala 511, Barra da Tijuca, Rio de Janeiro/RJ, Cep 22775-040, e-mail: administrativo@blipprodutora.com.br.</p>
+      <p style="margin-top:8px"><strong>LOCADOR:</strong> <strong>${c?c.nome:'_____________________'}</strong>, portador do ${docTipoCtr}: <strong>${c&&c.doc?c.doc:'___________'}</strong> com sede na <strong>${c&&c.endereco?c.endereco:'__________'}</strong>, e-mail: <strong>${c&&c.email?c.email:'____________________'}</strong>.</p>
+
+      <h3>OBJETO CONTRATUAL</h3>
+      <p>É objeto do presente contrato a locação de bem(ns) móvel(is) nominado(s) de EQUIPAMENTO(S), locados da LOCADORA ao LOCATÁRIO, discriminado(s) na(s) Ordem(s) de Serviço(s) emitida(s) durante o período contratual.</p>
+      <p style="margin-top:6px">O presente contrato, com complemento dos Termos e Condições de Locação e da Ordem de Serviço, regerá todas as locações realizadas durante o prazo contratual.</p>
+
+      <h3>VALIDADE</h3>
+      <p>O presente contrato é válido para toda e qualquer locação realizada entre as partes durante o prazo contratual.</p>
+      <p style="margin-top:6px">As cláusulas do presente contrato prevalecem sob qualquer divergência encontrada na Ordem de Serviço, salvo expressa informação de prevalência.</p>
+
+      <h3>PRAZO CONTRATUAL</h3>
+      <p>O presente contrato possui prazo de 24 (vinte e quatro) meses, a contar de sua assinatura. Findado o prazo estipulado e realizada nova locação, haverá renovação automática pelo mesmo prazo e termos estipulados.</p>
+
+      <h3>DANOS, PERDA, ROUBO E SEGURO DO OBJETO</h3>
+      <p>O LOCATÁRIO (o) concorda que a LOCADORA ou seus representantes credenciados possam a qualquer momento inspecionar o EQUIPAMENTO, ficando ressalvado, porém, que à LOCADORA não estará obrigado a fazer tais inspeções, e não poderá ser responsabilizada se não as fizer.</p>
+      <p style="margin-top:6px">O LOCATÁRIO deve realizar todas as devoluções de equipamentos da LOCADORA nas mesmas condições de uso, conservação, apresentação e funcionamento em que o recebeu, sob pena de indenização por danos materiais e lucro cessante.</p>
+      <p style="margin-top:6px">LOCATÁRIO(a) deverá comunicar à LOCADORA os fatos e ocorrências envolvendo o EQUIPAMENTO, que não forem decorrentes do seu uso regular, inclusive danos, desastres, perdas, furto ou roubo, devendo ainda, tomar as providências cabíveis junto às autoridades oficiais, quando for o caso, e diligenciar por todos os meios possíveis para reavê-lo sem prejuízo da sua responsabilidade perante à LOCADORA, nos termos estipulados por este contrato.</p>
+      <p style="margin-top:6px">Os consertos ou reparos que se fizerem necessários no decorrer do prazo da locação, apesar de serem da total responsabilidade do LOCATÁRIO, só poderão ser realizados por técnicos da LOCADORA ou em oficina expressamente aprovada pela segunda.</p>
+      <p style="margin-top:6px">Para efeito do pagamento da locação, o prazo de duração dos consertos e reparos não interrompe e nem suspende o prazo de locação. O valor será correspondente ao período no qual o equipamento permanecer inativo em decorrência de consertos e reparos que forem necessários pela sua devolução danificada, ou apresentando defeitos ou falta de peças, sem prejuízo da responsabilidade pelos custos dos reparos, consertos e substituições.</p>
+      <p style="margin-top:6px">A indenização será calculada do dia acordado para devolução do equipamento até a data em que for colocado em perfeitas condições de funcionamento. No caso de haver perda total do equipamento locado, seja por roubo, furto, desastre ou qualquer outra causa, o LOCATÁRIO será responsável pela indenização à LOCADORA, do valor total do mesmo equipamento novo a ser importado (valor F.O B., acrescido de todas as demais taxas, impostos e despesas). Será da exclusiva responsabilidade do(a) LOCATÁRIO(a), a ocorrência de evento envolvendo responsabilidade por danos corporais e/ou materiais ou pecuniários causados a terceiros e decorrentes da posse, uso, transporte ou operação do EQUIPAMENTO, não cabendo à LOCADORA qualquer obrigação daí resultante.</p>
+      <p style="margin-top:6px">Em caso de perda ou dano do objeto locado, os EQUIPAMENTOS cobertos por seguro, dentro das condições do Seguro, poderão ser restituídos por meio do pagamento da franquia pelo LOCATÁRIO. O LOCATÁRIO é responsável pelo pagamento da franquia, além do pagamento a título de lucros cessantes, a ser apurado judicialmente, ou, a critério da LOCADORA, o pagamento do valor de locação do EQUIPAMENTO, até que a efetiva substituição daquele seja feita. Os EQUIPAMENTOS possuem apólices de seguro diferentes, devendo ser solicitada pelo LOCATÁRIO à LOCADORA o envio desta, a fim de tomar conhecimento de todas as condições e cobertura.</p>
+
+      <h3>COBRANÇA</h3>
+      <p>O LOCATÁRIO possui a obrigação de atualizar os dados cadastrais para cobrança, de forma que não será eximido de qualquer responsabilidade em caso de faturamento e/ou envio de cobrança de acordo com dados desatualizados.</p>
+      <p style="margin-top:6px">O LOCATÁRIO aceita receber cobranças/faturas por meio do e-mail de cadastro, sendo de sua responsabilidade a checagem de mensagens, inclusive em caixa de spam. Não pode o LOCATÁRIO alegar a ausência de ciência de mensagens enviadas por este meio.</p>
+      <p style="margin-top:6px">Em se tratando de pessoa jurídica regida por MEI ou ME, a pessoa física do representante poderá ser utilizada para cobranças, entendendo-se as obrigações entre a pessoa jurídica e a pessoa física, por todos os bens.</p>
+      <p style="margin-top:6px">Em caso de inadimplência qualquer benefício de desconto será revogado, o valor será atualizado monetariamente e serão acrescidos juros no montante legal, multa de 10% (dez por cento) e honorários advocatícios.</p>
+      <p style="margin-top:6px">Os valores descritos no item "descontos" na Ordem de Serviço não serão aplicados em caso de descumprimento de qualquer das cláusulas do presente contrato.</p>
+      <p style="margin-top:6px">Os boletos de cobrança em conjunto a Ordem de Serviço e o presente contrato, formam título de crédito extrajudicial, de forma que poderá a LOCADORA ajuizar Execução de Título Extrajudicial do boleto de cobrança inadimplido.</p>
+
+      <h3>ACEITAÇÃO DIVERSA</h3>
+      <p>A aceitação de locação em termo diverso, não acarretará em alteração do presente contrato, cabendo eventuais termos apenas à Ordem de Serviço em referência.</p>
+
+      <h3>TERMOS E CONDIÇÕES DA LOCAÇÃO</h3>
+      <p>O LOCATÁRIO declara estar ciente e de acordo com os Termos e Condições de Locação (ANEXO I). A aceitação da Ordem de Serviço implica na aceitação dos Termos e Condições de Locação vigentes, podendo ser solicitado a qualquer tempo.</p>
+      <p style="margin-top:6px">Os Termos e Condições de Locação são parte integral do presente Contrato de Locação, apontado como Anexo I.</p>
+
+      <h3>ORDEM DE SERVIÇO</h3>
+      <p>A Ordem de Serviço poderá ser aceita por meio eletrônico. O aceite poderá ocorrer em simples "ok" como resposta da correspondência eletrônica a qual a Ordem de Serviço estará anexa. Posto que as correspondências de e-mail são acessadas por senha e consideradas pessoais, valerão/equivalerão como assinatura do LOCATÁRIO.</p>
+      <p style="margin-top:6px">A Ordem de Serviço aceita, se torna parte integral do presente Contrato de Locação de Bem Móvel e, salvo expressa disposição em contrário na Ordem de Serviço, seguirá todos os termos e condições aqui acordados.</p>
+      <p style="margin-top:6px">O EQUIPAMENTO será entregue mediante a assinatura do LOCATÁRIO (ou pessoa autorizada via e-mail) na Ordem de Serviço, a qual constitui prova bastante de que o testou e de que o recebeu em perfeito estado de conservação, funcionamento e utilização, sem defeitos ou vícios de qualquer natureza, visto estar obrigado a fazer os testes e inspeções que desejar, através de pessoal devidamente habilitado e com conhecimentos técnicos adequados. A retirada deverá ocorrer pelo próprio LOCATÁRIO ou por pessoa indicada via e-mail enviado pelo LOCATÁRIO.</p>
+      <p style="margin-top:6px">Os prazos e valores estipulados na Ordem de Serviço prevalecem ao presente contrato.</p>
+
+      <h3>INADIMPLÊNCIA E RESCISÃO CONTRATUAL</h3>
+      <p>Em caso de inadimplência de qualquer das disposições presentes no presente contrato e nos Termos e Condições de Locação, poderá a LOCADORA ajuizar medidas judiciais cabíveis, sendo de obrigação do LOCATÁRIO o pagamento de honorários advocatícios à patrona da LOCADORA no montante de 20% (vinte por cento) do valor da locação ou da dívida (o de maior valor).</p>
+      <p style="margin-top:6px">Em caso de descumprimento de qualquer cláusula, termo ou condição de uso por parte do LOCATÁRIO, a LOCADORA poderá rescindir o presente contrato.</p>
+      <p style="margin-top:6px">O rompimento contratual não surte efeito nas locações iniciadas anteriormente à data do pedido de distrato.</p>
+      <p style="margin-top:6px">A rescisão amigável não acarreta na retirada de responsabilidade, nem o perdão de eventuais dívidas, geradas pelas locações iniciadas durante o período contratual.</p>
+
+      <h3>PROTEÇÃO DE DADOS</h3>
+      <p>A LOCADORA armazenará os dados colhidos exclusivamente para fins de fatura e/ou necessidade de dados para soluções jurídicas de inadimplência.</p>
+      <p style="margin-top:6px">Os dados não são compartilhados e não estão disponíveis em redes.</p>
+      <p style="margin-top:6px">A LOCADORA se compromete a seguir todo o disposto na Lei Geral de Proteção de Dados.</p>
+
+      <h3>DISPOSIÇÕES FINAIS</h3>
+      <p>O presente contrato é regido pelo vigente Código Civil Brasileiro.</p>
+      <p style="margin-top:6px">Na forma do Código de Processo Civil, as partes elegem como competente para dirimir dúvidas ou divergências oriundas do presente, o Foro de competência da LOCADORA.</p>
+      <p style="margin-top:6px">As partes declaram estar justas e contratadas, rubricando todas as páginas e assinando o presente contrato em duas vias iguais.</p>
+
+      <p style="margin-top:24px">Rio de Janeiro, ${hoje}</p>
+
+      <div class="sig-grid" style="margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:40px 60px">
+        <div class="sig-line">Locadora</div>
+        <div class="sig-line">Locatário(a)</div>
         <div class="sig-line">Testemunha</div>
         <div class="sig-line">Testemunha</div>
+      </div>
+
+      <div style="margin-top:48px;border-top:2px solid #333;padding-top:18px">
+        <h2 style="text-align:center">ANEXO I</h2>
+        <h3 style="text-align:center">TERMOS E CONDIÇÕES DE LOCAÇÃO</h3>
+        <p style="margin-top:10px">O EQUIPAMENTO somente será entregue mediante a assinatura do LOCATÁRIO na Ordem de Serviço, o qual servirá como Check List e constitui prova bastante de que o testou e de que o recebeu em perfeito estado de conservação, funcionamento e utilização, sem defeitos ou vícios de qualquer natureza, aparentes ou ocultos, visto estar obrigado a fazer os testes e inspeções que desejar, através de pessoal devidamente habilitado e com conhecimentos técnicos adequados.</p>
+        <p style="margin-top:6px">A retirada deverá ocorrer pelo próprio LOCATÁRIO ou por pessoa indicada via e-mail enviado pelo LOCATÁRIO. Para que a retirada dos equipamentos ocorra por pessoa autorizada pelo(a) LOCATÁRIO(a), o aceite da Ordem de Serviço ocorrerá por correspondência eletrônica.</p>
+        <p style="margin-top:6px">Ao indicar terceiro para retirada, o LOCATÁRIO se responsabilizará pela vinculação comercial e pelo recebimento e check list feito pela pessoa que foi autorizada à retirada. O mesmo se aplica caso a retirada seja realizada por empresa terceirizada a pedido do LOCATÁRIO (Uber, 99 Taxi, Loggy e/ou outros), de forma que o LOCATÁRIO assume a total responsabilidade, como se por ele retirado fosse.</p>
+        <p style="margin-top:6px">A LOCADORA não está obrigada a ensinar a utilização dos equipamentos. A retirada dos equipamentos pressupõe que o LOCATÁRIO possui conhecimento técnico suficiente para utilização.</p>
+        <h4 style="margin-top:12px">DEVOLUÇÃO</h4>
+        <p>O LOCATÁRIO, às suas expensas e sob sua inteira responsabilidade, devolverá o EQUIPAMENTO no domicílio da LOCADORA, nas mesmas condições de uso, conservação, apresentação e funcionamento em que o recebeu.</p>
+        <p style="margin-top:6px">A devolução deverá ocorrer no dia estipulado na Ordem de Serviço e no horário de funcionamento da LOCADORA.</p>
+        <p style="margin-top:6px">Caso a devolução não ocorra na data estipulada e dentro do horário de funcionamento da LOCADORA, as frações de horas serão consideradas dias.</p>
+        <p style="margin-top:6px">Não havendo a devolução na data e hora estipulada, o LOCATÁRIO responderá por eventuais perdas, danos e lucros cessantes resultantes do atraso.</p>
+        <p style="margin-top:6px">O recebimento dos equipamentos pela LOCADORA, não eximirá o LOCATÁRIO ao pagamento de indenização devida caso sejam apuradas posteriormente - no prazo de 03 (três) dias úteis - quaisquer irregularidades eventualmente não constatadas no ato da devolução.</p>
+        <h4 style="margin-top:12px">PRAZO DE LOCAÇÃO</h4>
+        <p>O prazo desta locação é o constante na Ordem de Serviço deste, somente sendo prorrogado a exclusivo critério da LOCADORA e desde que tenha sido solicitado pelo(a) LOCATÁRIO(a). A LOCADORA, todavia, não será obrigada a concordar com a prorrogação solicitada.</p>
+        <p style="margin-top:6px">A contagem do prazo de locação é contínua e sucessiva, não se suspendendo ou interrompendo nos sábados, domingos e feriados, e iniciando-se no dia e hora da entrega do EQUIPAMENTO ao LOCATÁRIO. Para a contagem do prazo de locação, serão consideradas diárias das 00:00 às 23:59.</p>
+        <p style="margin-top:6px">A locação terá início imediatamente após a retirada dos equipamentos, considerando-se as frações de dias como dia completo, para o pagamento dos aluguéis. Caso o equipamento seja retirado após a data solicitada na Ordem de Serviço, para fins de cobrança, será considerado como retirado na data constante na Ordem de Serviço, não na retirada de fato, posto que os equipamentos ficam inutilizados à LOCADORA nesse período.</p>
+        <h4 style="margin-top:12px">RESPONSABILIDADES DO LOCATÁRIO</h4>
+        <p>A LOCADORA não assume qualquer responsabilidade por eventuais prejuízos que o(a) LOCATÁRIO(a) possa vir a sofrer pelo mau funcionamento do EQUIPAMENTO, uma vez que é obrigação deste, inspecioná-lo e testá-lo quando do seu recebimento. O(A) LOCATÁRIO(a) não poderá ceder, sublocar ou emprestar o EQUIPAMENTO, nem os direitos decorrentes deste contrato, sem prévia autorização por escrito da LOCADORA.</p>
+        <p style="margin-top:6px">Será da exclusiva responsabilidade do LOCATÁRIO, a ocorrência de evento envolvendo responsabilidade por danos corporais e/ou materiais ou pecuniários causados a terceiros e decorrentes da posse, uso, transporte ou operação do EQUIPAMENTO, não cabendo à LOCADORA qualquer obrigação daí resultante.</p>
+        <h4 style="margin-top:12px">DANOS, PERDA E SEGURO DOS EQUIPAMENTOS</h4>
+        <p>Na hipótese do(a) LOCATÁRIO(a) infringir quaisquer cláusulas deste contrato, notadamente as relativas ao uso, operação e devolução do EQUIPAMENTO, infrações estas praticadas por ele(a) ou sua equipe genericamente considerada, deverá indenizar a LOCADORA, por todas as perdas, prejuízos, despesas e honorários advocatícios de 20% (vinte por cento) a que deu causa.</p>
+        <p style="margin-top:6px">O(A) LOCATÁRIO(a) também indenizará a LOCADORA com o valor correspondente a 50% (cinquenta por cento) dos aluguéis, calculados durante o período no qual o equipamento permanecer inativo em decorrência de consertos e reparos que forem necessários pela sua devolução danificada, ou apresentando defeitos ou falta de peças, sem prejuízo da responsabilidade pelos custos dos reparos, consertos e substituições. A indenização será calculada do dia do vencimento do contrato, até a data em que o EQUIPAMENTO for colocado em perfeitas condições de funcionamento. No caso de haver perda total do equipamento locado, seja por roubo, furto, desastre ou qualquer outra causa, o(a) LOCATÁRIO(a) será responsável pela indenização à LOCADORA, do valor total do mesmo equipamento novo a ser importado (valor F.O.B., acrescido de todas as demais taxas, impostos e despesas), em caso deste estar coberto por seguro será responsável pelo pagamento da franquia, além do pagamento a título de lucros cessantes, a ser apurado judicialmente, ou, a critério da LOCADORA, o pagamento do valor de locação do EQUIPAMENTO, até que a efetiva substituição daquele seja feita.</p>
+        <h4 style="margin-top:12px">PAGAMENTO E COBRANÇA</h4>
+        <p>O pagamento da locação deverá ser efetuado à LOCADORA, no prazo e condições aqui descritos, salvo disposição em contrário na Ordem de Serviço.</p>
+        <p style="margin-top:6px">As cobranças serão realizadas via boleto bancário para pagamento em até 05 (cinco) dias, enviado ao e-mail cadastrado.</p>
+        <p style="margin-top:6px">Para fins de cobrança, o início e o término da locação somente serão considerados dentro do horário de funcionamento da LOCADORA, de modo que a entrega do equipamento deverá ocorrer dentro deste horário, sob pena de acréscimo de diária.</p>
+        <p style="margin-top:6px">Em caso de inadimplência, o valor será atualizado monetariamente e serão acrescidos juros de 1% ao mês, multa de 10% e honorários advocatícios.</p>
+        <p style="margin-top:6px">Os valores descritos no item "descontos" na Ordem de Serviço não serão aplicados em caso de descumprimento de qualquer das cláusulas do presente contrato.</p>
+        <h4 style="margin-top:12px">NOTA FISCAL</h4>
+        <p>A emissão de Fatura de Locação deverá ser solicitada junto ao orçamento.</p>
+        <p style="margin-top:6px">Nos termos da legislação vigente, Lei Complementar 116 de 31 de julho de 2003, por se tratar de disponibilização de bem e não prestação de serviço, inexiste a obrigatoriedade de emissão de Nota Fiscal. Caso o LOCATÁRIO deseje a emissão da Fatura de Locação, será acrescida a porcentagem necessária para cobertura dos custos, devendo ser aceita antes da retirada do equipamento.</p>
       </div>
     </div>`;
   }else{
     const docTipo=c&&c.doc?(c.doc.replace(/[^0-9]/g,'').length<=11?'CPF':'CNPJ'):'CPF';
-    const itens=o.itens||[];
+    const itensList=(o.itens_avulsos||[]);
+    const linhasEquip=[0,1,2,3].map(i=>{
+      const item=itensList[i];
+      return`<p style="margin-top:8px">${i+1} ${item?item.desc:'______________________________'}</p>`;
+    }).join('');
     html=`<div class="ctr" id="ctr-print">
-      <h1>Contrato de Locação de Equipamentos de Foto/Filmagem</h1>
-      <p style="margin-top:18px">Eu, <strong>${c?c.nome:'___________________'}</strong>, portador do ${docTipo}: <strong>${c?c.doc:'___________________'}</strong>, declaro por meio desta, que realizei/realizarei a locação dos equipamentos abaixo mencionados, de propriedade do(a) <strong>BLIP PRODUTORA AUDIOVISUAL LTDA</strong>, registrado no CNPJ: <strong>53.049.041/0001-39</strong>, no período de <strong>${fmtD(o.retirada)}</strong> (retirada) até <strong>${fmtD(o.devolucao)}</strong> (devolução).</p>
-      <h3 style="margin-top:22px">Lista dos equipamentos:</h3>
-      ${itens.map((i,n)=>{const e=eq(i.equip_id);return`<p>${n+1}. ${e?e.nome:'?'} — ${i.qty} un.${e&&e.descricao?`<span style="font-size:10px;color:#666"> (${e.descricao})</span>`:''}</p>`;}).join('')}
-      <div class="sig-grid" style="margin-top:48px">
-        <div class="sig-line">Locador<br>BLIP PRODUTORA AUDIOVISUAL LTDA<br>CNPJ: 53.049.041/0001-39</div>
-        <div class="sig-line">Locatário<br>${c?c.nome:'___________________'}<br>${c?c.doc:'___________________'}</div>
+      <h1>Contrato de locação de equipamentos de foto/filmagem</h1>
+      <p style="margin-top:18px">Eu, <strong>${c?c.nome:'NOME DO LOCADOR'}</strong>, portador do ${docTipo} <strong>${c&&c.doc?c.doc:'CPF DO LOCADOR'}</strong>, <em>(ou no caso de empresa)</em> , registrada no CNPJ <strong>${c&&c.doc&&c.doc.replace(/[^0-9]/g,'').length>11?c.doc:'NUMERO DA EMPRESA'}</strong>,</p>
+      <p style="margin-top:12px">Declaro por meio desta, que realizei/realizarei a locação dos equipamentos abaixo mencionados, de propriedade do(a) <strong>BLIP PRODUTORA AUDIOVISUAL LTDA</strong>, portador do CPF DO SEGURADO, no período de <strong>${fmtD(o.retirada)}</strong> e <strong>${fmtD(o.devolucao)}</strong>.</p>
+      <p style="margin-top:18px"><strong>LISTA DOS EQUIPAMENTOS:</strong></p>
+      ${linhasEquip}
+      <div style="margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:40px">
+        <div class="sig-line">________________________________ Locador</div>
+        <div class="sig-line">_______________________________ Locatário</div>
       </div>
-      <p style="text-align:center;margin-top:24px;font-size:10px;color:#666">Rio de Janeiro, ${hoje}</p>
+      <p style="margin-top:24px">Cidade, ${hoje}.</p>
     </div>`;
   }
   document.getElementById('ctr-content').innerHTML=html;
