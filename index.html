@@ -318,7 +318,13 @@ tr:hover td{background:var(--bg3)}
 
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
-      <div class="ph"><h1>Dashboard</h1><button class="btn btn-p" onclick="openM('m-nova-os')">+ Nova OS</button></div>
+      <div class="ph"><h1>Dashboard</h1>
+        <div style="display:flex;align-items:center;gap:10px;position:relative">
+          <button class="btn btn-g" onclick="toggleNotifPanel(event)" title="Notificações" style="position:relative;font-size:16px">🔔<span id="notif-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center">0</span></button>
+          <div id="notif-panel" style="display:none;position:absolute;top:46px;right:0;width:330px;max-height:440px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.45);z-index:300"></div>
+          <button class="btn btn-p" onclick="openM('m-nova-os')">+ Nova OS</button>
+        </div>
+      </div>
       <div class="lemb-grid" id="lemb-grid"></div>
       <div class="stat-grid" id="stat-grid"></div>
       <div class="card">
@@ -885,6 +891,7 @@ tr:hover td{background:var(--bg3)}
         <div style="font-size:13px;color:var(--text2)">Desconto: <strong id="vos-desc"></strong></div>
         <div style="font-size:18px;font-weight:600;color:var(--accent);margin-top:4px">Total: <span id="vos-total"></span></div>
       </div>
+      <div id="vos-atraso" style="display:none"></div>
       <!-- Alterar status -->
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <h3 style="margin-bottom:10px">Alterar status</h3>
@@ -1303,6 +1310,22 @@ const eq=id=>cache.equipamentos.find(e=>e.id===id)||null;
 const cli=id=>cache.clientes.find(c=>c.id===id)||null;
 const calcDias=(r,d)=>{if(!r||!d)return 1;const s=new Date(r),e=new Date(d);return Math.max(1,Math.ceil((e-s)/86400000))};
 
+function osAtrasada(o){
+  if(o.status!=='alugado'||!o.devolucao)return false;
+  const dev=new Date(o.devolucao+'T'+(o.hora_devolucao||'18:00')+':00');
+  return new Date()>dev;
+}
+function diasAtraso(o){
+  if(o.status!=='alugado'||!o.devolucao)return 0;
+  const dev=new Date(o.devolucao+'T'+(o.hora_devolucao||'18:00')+':00');
+  const diff=new Date()-dev;
+  return diff>0?Math.ceil(diff/86400000):0;
+}
+function valorDiariaOS(o){
+  let v=0;(o.itens||[]).forEach(i=>{v+=(i.diaria||0)*(i.qty||1);});
+  (o.itens_avulsos||[]).forEach(a=>{v+=(a.valor||0);});
+  return v;
+}
 function osTotal(o){
   const itens=o.itens||[];const d=calcDias(o.retirada,o.devolucao);
   let subEq=0; itens.forEach(i=>{subEq+=(i.diaria||0)*i.qty*d;});
@@ -2232,9 +2255,103 @@ function renderLembretes(){
       <div class="lemb-t">🟡 Em análise</div>
     </div>`);
   }
+  // Equipamentos não devolvidos (atrasados)
+  const atrasadas=cache.os.filter(o=>osAtrasada(o));
+  if(atrasadas.length){
+    items.unshift(`<div class="lemb" style="background:rgba(255,92,92,.2);border-color:var(--danger)" onclick="setOsFilter('alugado',null);go('os')">
+      <div class="lemb-n" style="color:var(--danger)">${atrasadas.length}</div>
+      <div class="lemb-t" style="font-weight:600;color:var(--text)">⏰ Equipamento não devolvido</div>
+      <div class="lemb-t">Passou do horário de devolução</div></div>`);
+  }
   const grid = document.getElementById('lemb-grid');
   if(grid) grid.innerHTML = items.length ? items.join('') : '';
+  renderNotifs();
 }
+
+// ===== SINO DE NOTIFICAÇÕES =====
+function lerNotifsLidas(){try{return JSON.parse(localStorage.getItem('blip_notifs_lidas')||'[]');}catch(e){return [];}}
+function salvarNotifsLidas(arr){try{localStorage.setItem('blip_notifs_lidas',JSON.stringify(arr));}catch(e){}}
+function construirNotifs(){
+  const out=[];const hoje=new Date();hoje.setHours(0,0,0,0);
+  // Atrasos (prioridade)
+  cache.os.filter(o=>osAtrasada(o)).forEach(o=>{
+    const c=cli(o.cliente_id);const d=diasAtraso(o);const temTaxa=(o.taxa_atraso||0)>0;
+    out.push({id:'atraso-'+o.id,cor:'var(--danger)',ic:'⏰',
+      tit:`OS #${o.numero} não devolvida`,
+      sub:`${c?c.nome:'—'} · ${d} dia(s) de atraso${temTaxa&&!o.taxa_atraso_paga?' · taxa em aberto':''}`,
+      acao:o.id});
+  });
+  // Taxa de atraso em aberto (mesmo que já devolvido)
+  cache.os.filter(o=>(o.taxa_atraso||0)>0 && !o.taxa_atraso_paga && !osAtrasada(o)).forEach(o=>{
+    const c=cli(o.cliente_id);
+    out.push({id:'taxa-'+o.id,cor:'var(--warning)',ic:'💸',
+      tit:`Taxa de atraso em aberto — OS #${o.numero}`,
+      sub:`${c?c.nome:'—'} · ${fmt(o.taxa_atraso)} a receber`,acao:o.id});
+  });
+  // Devolução hoje
+  cache.os.filter(o=>{if(o.status!=='alugado'||!o.devolucao)return false;const dv=new Date(o.devolucao);dv.setHours(0,0,0,0);return dv.getTime()===hoje.getTime()&&!osAtrasada(o);}).forEach(o=>{
+    const c=cli(o.cliente_id);
+    out.push({id:'devhoje-'+o.id,cor:'var(--warning)',ic:'📦',tit:`Devolução hoje — OS #${o.numero}`,sub:`${c?c.nome:'—'}`,acao:o.id});
+  });
+  // Pagamentos em aberto
+  cache.os.filter(o=>o.pagamento==='em aberto'&&['alugado','devolvido'].includes(o.status)).forEach(o=>{
+    const c=cli(o.cliente_id);
+    out.push({id:'pgto-'+o.id,cor:'var(--danger)',ic:'💰',tit:`Pagamento em aberto — OS #${o.numero}`,sub:`${c?c.nome:'—'}`,acao:o.id});
+  });
+  // Cadastros pendentes
+  cache.clientes.filter(c=>c.status_cadastro==='pendente').forEach(c=>{
+    out.push({id:'cad-'+c.id,cor:'var(--success)',ic:'👤',tit:`Novo cadastro: ${c.nome}`,sub:'Aguardando aprovação',acao:null,cliId:c.id});
+  });
+  return out;
+}
+function renderNotifs(){
+  const lidas=lerNotifsLidas();
+  const todas=construirNotifs();
+  const naoLidas=todas.filter(n=>!lidas.includes(n.id));
+  const badge=document.getElementById('notif-badge');
+  if(badge){badge.textContent=naoLidas.length;badge.style.display=naoLidas.length?'inline-block':'none';}
+  const panel=document.getElementById('notif-panel');
+  if(!panel)return;
+  let head=`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2)">
+    <span style="font-weight:600;font-size:14px">Notificações</span>
+    ${naoLidas.length?`<button class="btn btn-g btn-sm" onclick="marcarTodasLidas()" style="font-size:11px">Marcar todas lidas</button>`:''}
+  </div>`;
+  if(!naoLidas.length){
+    panel.innerHTML=head+`<div style="padding:28px 14px;text-align:center;color:var(--text3);font-size:13px">🎉 Nenhuma notificação nova</div>`;
+    return;
+  }
+  const linhas=naoLidas.map(n=>{
+    const goAcao=n.acao!=null?`closeNotifPanel();verOS(${n.acao});`:(n.cliId?`closeNotifPanel();irParaStatus('pendente');`:`closeNotifPanel();`);
+    return`<div style="display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border)">
+      <div style="font-size:18px;line-height:1.2">${n.ic}</div>
+      <div style="flex:1;cursor:pointer" onclick="${goAcao}">
+        <div style="font-size:13px;font-weight:500;color:${n.cor}">${n.tit}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px">${n.sub}</div>
+      </div>
+      <button onclick="marcarNotifLida('${n.id}')" title="Marcar como lida" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 2px">✓</button>
+    </div>`;
+  }).join('');
+  panel.innerHTML=head+linhas;
+}
+function marcarNotifLida(nid){
+  const l=lerNotifsLidas();if(!l.includes(nid)){l.push(nid);salvarNotifsLidas(l);}
+  renderNotifs();
+}
+function marcarTodasLidas(){
+  const l=lerNotifsLidas();construirNotifs().forEach(n=>{if(!l.includes(n.id))l.push(n.id);});
+  salvarNotifsLidas(l);renderNotifs();
+}
+function toggleNotifPanel(ev){
+  if(ev)ev.stopPropagation();
+  const p=document.getElementById('notif-panel');if(!p)return;
+  p.style.display=p.style.display==='none'?'block':'none';
+  if(p.style.display==='block')renderNotifs();
+}
+function closeNotifPanel(){const p=document.getElementById('notif-panel');if(p)p.style.display='none';}
+document.addEventListener('click',e=>{
+  const p=document.getElementById('notif-panel');
+  if(p&&p.style.display==='block'&&!p.contains(e.target)&&!(e.target.closest&&e.target.closest('button[onclick*="toggleNotifPanel"]')))closeNotifPanel();
+});
 
 // ===== OS =====
 function limparFiltrosOS(){
@@ -2552,6 +2669,7 @@ function verOS(id){
   document.getElementById('vos-desc').textContent=`${o.desconto||0}% (− ${fmt(disc)})`;
   document.getElementById('vos-total').textContent=fmt(total);
   renderStatusBtns(o);
+  renderTaxaAtraso(o);
   vosTab('info',document.querySelector('#m-ver-os .tab'));
   // Controlar visibilidade por role
   const btnExcluir=document.getElementById('btn-excluir-os');
@@ -2661,6 +2779,86 @@ async function setOsStatus(s){
     document.getElementById('vos-status-badge').textContent=SL[s];
     if(pgto!==o.pagamento){updateVosPgtoBadge(pgto);updateVosPgtoEl(pgto);document.getElementById('vos-pgto-sel').value=pgto;}
     toast('Status atualizado!');renderOS();renderDashboard();
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+function renderTaxaAtraso(o){
+  const cont=document.getElementById('vos-atraso');
+  if(!cont)return;
+  const atrasada=osAtrasada(o);
+  const temTaxa=(o.taxa_atraso||0)>0;
+  if(!atrasada && !temTaxa){cont.style.display='none';cont.innerHTML='';return;}
+  cont.style.display='block';
+  const dias=diasAtraso(o);
+  const diaria=valorDiariaOS(o);
+  const sugerido=dias*diaria;
+  let html='';
+  if(temTaxa){
+    const paga=o.taxa_atraso_paga;
+    html=`<div style="margin:14px 0;padding:14px 16px;border-radius:10px;background:${paga?'rgba(74,255,140,.1)':'rgba(255,184,74,.12)'};border:1px solid ${paga?'var(--success)':'var(--warning)'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-weight:600;font-size:13px">⏰ Taxa de atraso</span>
+        <span class="badge ${paga?'b-devolvido':'b-aberto'}">${paga?'✅ Paga':'⚠️ Em aberto'}</span>
+      </div>
+      <div style="font-size:20px;font-weight:700;font-family:Arial,monospace;color:${paga?'var(--success)':'var(--warning)'}">${fmt(o.taxa_atraso)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">Valor da locação já foi cobrado à parte. Esta é uma cobrança adicional pelo atraso.</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        ${!paga?`<button class="btn btn-p btn-sm" onclick="marcarTaxaPaga()">✅ Marcar como paga</button>`:''}
+        <button class="btn btn-g btn-sm" onclick="cancelarTaxaAtraso()">🗑️ Remover taxa</button>
+      </div>
+    </div>`;
+  } else {
+    html=`<div style="margin:14px 0;padding:14px 16px;border-radius:10px;background:rgba(255,92,92,.12);border:1px solid var(--danger)">
+      <div style="font-weight:600;font-size:13px;color:var(--danger);margin-bottom:4px">⏰ Equipamento não devolvido</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Atrasado <b>${dias} dia(s)</b>. Diária da OS: ${fmt(diaria)} → sugerido <b>${fmt(sugerido)}</b> (${dias} × ${fmt(diaria)}).</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text2)">Valor a cobrar: R$</span>
+        <input type="number" id="taxa-atraso-input" value="${sugerido.toFixed(2)}" step="0.01" style="width:120px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text)">
+        <button class="btn btn-p btn-sm" onclick="gerarTaxaAtraso()">Gerar taxa</button>
+        <button class="btn btn-g btn-sm" onclick="naoCobrarAtraso()">Não cobrar</button>
+      </div>
+    </div>`;
+  }
+  cont.innerHTML=html;
+}
+
+async function gerarTaxaAtraso(){
+  const o=cache.os.find(x=>x.id===currentOSId);if(!o)return;
+  const inp=document.getElementById('taxa-atraso-input');
+  const val=parseFloat(inp?inp.value:0)||0;
+  if(val<=0){toast('Informe um valor maior que zero','err');return;}
+  try{
+    await sb('ordens_servico','PATCH',{taxa_atraso:val,taxa_atraso_paga:false},`?id=eq.${currentOSId}`);
+    o.taxa_atraso=val;o.taxa_atraso_paga=false;currentOS=o;
+    renderTaxaAtraso(o);renderOS();renderDashboard();
+    toast('Taxa de atraso gerada! Pendência em aberto.','ok');
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+function naoCobrarAtraso(){
+  const cont=document.getElementById('vos-atraso');
+  if(cont){cont.style.display='none';cont.innerHTML='';}
+  toast('Taxa não gerada. Você pode gerar depois se quiser.');
+}
+
+async function marcarTaxaPaga(){
+  const o=cache.os.find(x=>x.id===currentOSId);if(!o)return;
+  try{
+    await sb('ordens_servico','PATCH',{taxa_atraso_paga:true},`?id=eq.${currentOSId}`);
+    o.taxa_atraso_paga=true;currentOS=o;
+    renderTaxaAtraso(o);renderOS();renderDashboard();
+    toast('Taxa de atraso marcada como paga!','ok');
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+async function cancelarTaxaAtraso(){
+  const o=cache.os.find(x=>x.id===currentOSId);if(!o)return;
+  if(!confirm('Remover a taxa de atraso desta OS?'))return;
+  try{
+    await sb('ordens_servico','PATCH',{taxa_atraso:0,taxa_atraso_paga:false},`?id=eq.${currentOSId}`);
+    o.taxa_atraso=0;o.taxa_atraso_paga=false;currentOS=o;
+    renderTaxaAtraso(o);renderOS();renderDashboard();
+    toast('Taxa de atraso removida.');
   }catch(e){toast('Erro: '+e.message,'err');}
 }
 
