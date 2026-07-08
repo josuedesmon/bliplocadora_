@@ -430,7 +430,7 @@ tr:hover td{background:var(--bg3)}
           <option value="">Todas</option>
           <option>Kit</option><option>Câmera</option><option>Lente EF</option><option>Lente E-Mount</option>
           <option>Lente MFT</option><option>Movimento</option><option>Acessório</option><option>Comunicação</option>
-          <option>Memória</option><option>Conversor</option><option>Iluminação</option><option>Outro</option>
+          <option>Memória</option><option>Conversor</option><option>Iluminação</option><option>Áudio</option><option>Informática</option><option>Infraestrutura</option><option>Links Internet</option><option>Outro</option>
         </select>
         <span style="font-size:12px;color:var(--text3);margin-left:8px">Marca:</span>
         <select id="eq-fil-marca" onchange="renderEqs(document.getElementById('eq-search').value)" style="width:auto;padding:5px 10px;font-size:12px">
@@ -778,7 +778,6 @@ tr:hover td{background:var(--bg3)}
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <span style="font-size:12px;color:var(--text2)">Itens avulsos (frete, técnico, etc.)</span>
           <div style="display:flex;gap:6px">
-            <button class="btn btn-g btn-sm" onclick="abrirPatrimonioPicker('nos')">📦 Do patrimônio</button>
             <button class="btn btn-g btn-sm" onclick="addAvulso('nos')">+ Adicionar</button>
           </div>
         </div>
@@ -833,7 +832,6 @@ tr:hover td{background:var(--bg3)}
       <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <span style="font-size:12px;color:var(--text2)">Itens avulsos</span>
-          <button class="btn btn-g btn-sm" onclick="abrirPatrimonioPicker('eos')">📦 Do patrimônio</button>
           <button class="btn btn-g btn-sm" onclick="addAvulso('eos')">+ Adicionar</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 95px 70px 22px;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">
@@ -1040,18 +1038,30 @@ tr:hover td{background:var(--bg3)}
     </div>
     <div class="g2">
       <div class="fg"><label>Categoria</label>
-        <select id="eq-cat"><option>Kit</option><option>Câmera</option><option>Lente EF</option><option>Lente E-Mount</option><option>Lente MFT</option><option>Movimento</option><option>Acessório</option><option>Comunicação</option><option>Memória</option><option>Conversor</option><option>Iluminação</option><option>Outro</option></select>
+        <select id="eq-cat"><option>Kit</option><option>Câmera</option><option>Lente EF</option><option>Lente E-Mount</option><option>Lente MFT</option><option>Movimento</option><option>Acessório</option><option>Comunicação</option><option>Memória</option><option>Conversor</option><option>Iluminação</option><option>Áudio</option><option>Informática</option><option>Infraestrutura</option><option>Links Internet</option><option>Outro</option></select>
       </div>
       <div class="fg"><label>Valor da diária (R$)</label><input type="number" id="eq-diaria" min="0" step="0.01"></div>
     </div>
-    <div class="g2">
-      <div class="fg"><label>Quantidade em estoque</label><input type="number" id="eq-estoque" min="0" value="1" onchange="renderPatrimonios()"></div>
-      <div class="fg"><label>Descrição (itens inclusos)</label><input type="text" id="eq-desc" placeholder="Ex: 3 baterias, cartão SD..."></div>
+    <div class="g4">
+      <div class="fg"><label>Qtd. total</label><input type="number" id="eq-estoque" min="0" value="1" onchange="syncQtdCampos();renderPatrimonios()"></div>
+      <div class="fg"><label>Disponíveis</label><input type="number" id="eq-disponiveis" min="0" value="1"></div>
+      <div class="fg"><label>Indisponíveis</label><input type="number" id="eq-indisponiveis" min="0" value="0"></div>
+      <div class="fg"><label>Em manutenção</label><input type="number" id="eq-manutencao" min="0" value="0"></div>
     </div>
-    <!-- Patrimônios -->
+    <div class="g2">
+      <div class="fg"><label>Kit?</label>
+        <select id="eq-kit"><option value="nao">Não</option><option value="sim">Sim</option></select>
+      </div>
+      <div class="fg"><label>Acompanha</label><input type="text" id="eq-desc" placeholder="Ex: fonte, cabos, cartão SD..."></div>
+    </div>
     <div class="fg">
-      <label>Números de patrimônio <span style="font-size:11px;color:var(--text3)">(um por unidade)</span></label>
+      <label>Patrimônios <span style="font-size:11px;color:var(--text3)">(um por unidade)</span></label>
       <div id="patrimonios-lista" style="display:flex;flex-direction:column;gap:6px;margin-top:4px"></div>
+    </div>
+    <div class="fg">
+      <label>Patrimônios do Kit <span style="font-size:11px;color:var(--text3)">(separe por vírgula ou quebra de linha)</span></label>
+      <textarea id="eq-patrimonios-kit" rows="3" placeholder="Ex: BLIP 058 - fonte
+BLIP 059 - cabo"></textarea>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
       <button class="btn btn-g" onclick="closeM('m-novo-eq')">Cancelar</button>
@@ -1312,6 +1322,8 @@ const SEED_EQUIPAMENTOS=[{id:1,nome:'Filmmaker',cat:'Kit',diaria:539,estoque:1,s
 {id:80,nome:'Nanlite Forza 60B',cat:'Iluminação',diaria:162,estoque:1,serial:'',descricao:'Case acompanha panela e fonte AC',itensInclusos:[]},
 {id:81,nome:'Godox Lp600r 60w Led RGB',cat:'Iluminação',diaria:140,estoque:2,serial:'',descricao:'Case acompanha panela e fonte AC',itensInclusos:[]},
 {id:82,nome:'Kit c/3 Godox Lp600r 60w Led RGB',cat:'Iluminação',diaria:360,estoque:1,serial:'',descricao:'Case acompanha panela e fonte AC',itensInclusos:[]},
+{id:83,nome:'Starlink Gen2',cat:'Links Internet',diaria:500,estoque:1,quantidade_total:1,disponiveis:1,indisponiveis:0,em_manutencao:0,kit:'nao',serial:'',descricao:'Antena Starlink Gen2 com roteador, fonte e cabo',acompanha:'Roteador, fonte e cabo',patrimonios:[],patrimonios_kit:[],itensInclusos:[]},
+{id:84,nome:'Starlink Mini',cat:'Links Internet',diaria:400,estoque:2,quantidade_total:2,disponiveis:2,indisponiveis:0,em_manutencao:0,kit:'nao',serial:'',descricao:'Antena Starlink Mini com fonte/cabo',acompanha:'Fonte/cabo',patrimonios:[],patrimonios_kit:[],itensInclusos:[]},
 {id:83,nome:'Bastão Nanlite Pavotube II 6c',cat:'Iluminação',diaria:81,estoque:4,serial:'',descricao:'',itensInclusos:[]},
 {id:84,nome:'Bastão LED Godox TL60 RGB',cat:'Iluminação',diaria:146,estoque:4,serial:'',descricao:'',itensInclusos:[]},
 {id:85,nome:'Softbox Nanlite 60 c/ grid',cat:'Iluminação',diaria:108,estoque:2,serial:'',descricao:'',itensInclusos:[]}];
@@ -3466,26 +3478,36 @@ function renderEqs(q=''){
   const filCat=document.getElementById('eq-fil-cat')?.value||'';
   const filMarca=document.getElementById('eq-fil-marca')?.value||'';
   const filVal=document.getElementById('eq-fil-val')?.value||'';
-  let list=cache.equipamentos;
-  if(q)list=list.filter(e=>e.nome.toLowerCase().includes(q.toLowerCase())||e.cat?.toLowerCase().includes(q.toLowerCase())||(e.marca&&e.marca.toLowerCase().includes(q.toLowerCase())));
+  let list=cache.equipamentos||[];
+  const termo=(q||'').toLowerCase();
+  if(termo)list=list.filter(e=>(e.nome||'').toLowerCase().includes(termo)||(e.cat||'').toLowerCase().includes(termo)||(e.marca||'').toLowerCase().includes(termo)||(e.descricao||'').toLowerCase().includes(termo));
   if(filCat)list=list.filter(e=>e.cat===filCat);
   if(filMarca)list=list.filter(e=>e.marca===filMarca);
   if(filVal){
     const[mn,mx]=filVal==='600+'?[600,99999]:filVal.split('-').map(Number);
-    list=list.filter(e=>e.diaria>=mn&&e.diaria<=mx);
+    list=list.filter(e=>(parseFloat(e.diaria)||0)>=mn&&(parseFloat(e.diaria)||0)<=mx);
   }
   const cont=document.getElementById('eq-container');
   if(!list.length){cont.innerHTML=`<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum equipamento</div>`;return;}
+  const qTotal=e=>parseInt(e.quantidade_total ?? e.estoque ?? 0)||0;
+  const qDisp=e=>parseInt(e.disponiveis ?? e.disponíveis ?? e.disponivel ?? e.estoque ?? 0)||0;
+  const qInd=e=>parseInt(e.indisponiveis ?? e.indisponíveis ?? 0)||0;
+  const qMan=e=>parseInt(e.em_manutencao ?? e.manutencao ?? e['em manutenção'] ?? 0)||0;
+  const isKit=e=>String(e.kit||'').toLowerCase()==='sim'||e.kit===true;
+  const acomp=e=>e.acompanha||e.descricao||'';
+  const kitPat=e=>Array.isArray(e.patrimonios_kit)?e.patrimonios_kit.join(', '):(e.patrimonios_kit||'');
   if(eqView==='lista'){
     cont.innerHTML=`<div class="card" style="padding:0;overflow:hidden">
-      <div class="eq-list-hd" style="grid-template-columns:2fr 80px 90px 100px 70px 1fr 130px"><span>Nome</span><span>Marca</span><span>Categoria</span><span>Diária</span><span>Estoque</span><span>Descrição</span><span></span></div>
-      ${list.map(e=>`<div class="eq-list-row">
-        <span style="font-weight:500">${e.nome}</span>
+      <div class="eq-list-hd" style="grid-template-columns:2fr 80px 90px 90px 70px 70px 70px 1fr 130px"><span>Nome</span><span>Marca</span><span>Categoria</span><span>Diária</span><span>Total</span><span>Disp.</span><span>Manut.</span><span>Acompanha</span><span></span></div>
+      ${list.map(e=>`<div class="eq-list-row" style="grid-template-columns:2fr 80px 90px 90px 70px 70px 70px 1fr 130px">
+        <span style="font-weight:500">${e.nome}${isKit(e)?' <span class="badge b-reservado">Kit</span>':''}</span>
         <span style="font-size:12px;color:var(--text2)">${e.marca||'—'}</span>
-        <span><span class="badge b-emprestado">${e.cat}</span></span>
+        <span><span class="badge b-emprestado">${e.cat||'Outro'}</span></span>
         <span style="font-family:Arial,monospace;color:var(--accent)">${fmt(e.diaria)}</span>
-        <span style="color:var(--text2)">${e.estoque} un.</span>
-        <span style="font-size:11px;color:var(--text3)">${e.descricao||'—'}</span>
+        <span style="color:var(--text2)">${qTotal(e)}</span>
+        <span style="color:var(--success)">${qDisp(e)}</span>
+        <span style="color:var(--warning)">${qMan(e)}</span>
+        <span style="font-size:11px;color:var(--text3)">${acomp(e)||'—'}${kitPat(e)?'<br><span style="color:var(--accent)">Kit: '+kitPat(e)+'</span>':''}</span>
         <span style="display:flex;gap:6px">
           <button class="btn btn-g btn-sm" onclick="abrirEditEq(${e.id})">✏️ Editar</button>
           <button class="btn btn-d btn-sm" onclick="delEq(${e.id})">✕</button>
@@ -3502,28 +3524,48 @@ function renderEqs(q=''){
             <button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:13px;padding:2px" onclick="delEq(${e.id})">✕</button>
           </div>
         </div>
-        <div class="eq-cat">${e.cat}${e.marca?' · <span style="color:var(--accent)">'+e.marca+'</span>':''}</div>
+        <div class="eq-cat">${e.cat||'Outro'}${e.marca?' · <span style="color:var(--accent)">'+e.marca+'</span>':''}${isKit(e)?' · Kit':''}</div>
         <div class="eq-pr">${fmt(e.diaria)}<span style="font-size:9px;color:var(--text3);font-weight:400">/dia</span></div>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">Estoque: ${e.estoque} un.</div>
-        ${e.descricao?`<div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.4">${e.descricao}</div>`:''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:11px">
+          <span class="badge b-na">Total: ${qTotal(e)}</span>
+          <span class="badge b-devolvido">Disp.: ${qDisp(e)}</span>
+          ${qInd(e)?`<span class="badge b-aberto">Indisp.: ${qInd(e)}</span>`:''}
+          ${qMan(e)?`<span class="badge b-conserto">Manut.: ${qMan(e)}</span>`:''}
+        </div>
+        ${acomp(e)?`<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.4">${acomp(e)}</div>`:''}
+        ${kitPat(e)?`<div style="font-size:11px;color:var(--accent);margin-top:5px;line-height:1.4">Kit: ${kitPat(e)}</div>`:''}
       </div>`).join('')}</div>`;
   }
 }
-
 function abrirEditEq(id){
   const e=eq(id);if(!e)return;
   document.getElementById('eq-modal-title').textContent='Editar equipamento';
   document.getElementById('eq-edit-id').value=id;
-  document.getElementById('eq-nome').value=e.nome;
+  document.getElementById('eq-nome').value=e.nome||'';
   document.getElementById('eq-marca').value=e.marca||'';
-  document.getElementById('eq-cat').value=e.cat;
-  document.getElementById('eq-diaria').value=e.diaria;
-  document.getElementById('eq-estoque').value=e.estoque;
-  document.getElementById('eq-desc').value=e.descricao||'';
+  document.getElementById('eq-cat').value=e.cat||'Outro';
+  document.getElementById('eq-diaria').value=e.diaria||0;
+  document.getElementById('eq-estoque').value=parseInt(e.quantidade_total ?? e.estoque ?? 1)||0;
+  document.getElementById('eq-disponiveis').value=parseInt(e.disponiveis ?? e.estoque ?? 0)||0;
+  document.getElementById('eq-indisponiveis').value=parseInt(e.indisponiveis ?? 0)||0;
+  document.getElementById('eq-manutencao').value=parseInt(e.em_manutencao ?? e.manutencao ?? 0)||0;
+  document.getElementById('eq-kit').value=(String(e.kit||'').toLowerCase()==='sim'||e.kit===true)?'sim':'nao';
+  document.getElementById('eq-desc').value=e.acompanha||e.descricao||'';
+  const pk=Array.isArray(e.patrimonios_kit)?e.patrimonios_kit.join('\n'):(e.patrimonios_kit||'');
+  document.getElementById('eq-patrimonios-kit').value=pk;
   renderPatrimonios(e.patrimonios||[]);
   openM('m-novo-eq');
 }
 
+function syncQtdCampos(){
+  const total=parseInt(document.getElementById('eq-estoque')?.value)||0;
+  const disp=document.getElementById('eq-disponiveis');
+  const ind=document.getElementById('eq-indisponiveis');
+  const man=document.getElementById('eq-manutencao');
+  if(disp && (!disp.value || parseInt(disp.value)>total))disp.value=total;
+  if(ind && !ind.value)ind.value=0;
+  if(man && !man.value)man.value=0;
+}
 function renderPatrimonios(existentes=[]){
   const n=parseInt(document.getElementById('eq-estoque').value)||1;
   const lista=document.getElementById('patrimonios-lista');
@@ -3539,9 +3581,30 @@ function renderPatrimonios(existentes=[]){
 async function salvarEquip(){
   const nome=document.getElementById('eq-nome').value.trim();
   if(!nome){toast('Informe o nome','err');return;}
-  const estoque=parseInt(document.getElementById('eq-estoque').value)||1;
-  const patrimonios=Array.from(document.querySelectorAll('.patrimonio-input')).map(i=>i.value.trim());
-  const data={nome,marca:document.getElementById('eq-marca').value.trim(),cat:document.getElementById('eq-cat').value,diaria:parseFloat(document.getElementById('eq-diaria').value)||0,estoque,descricao:document.getElementById('eq-desc').value,patrimonios};
+  const estoque=parseInt(document.getElementById('eq-estoque').value)||0;
+  const disponiveis=parseInt(document.getElementById('eq-disponiveis')?.value)||0;
+  const indisponiveis=parseInt(document.getElementById('eq-indisponiveis')?.value)||0;
+  const em_manutencao=parseInt(document.getElementById('eq-manutencao')?.value)||0;
+  const patrimonios=Array.from(document.querySelectorAll('.patrimonio-input')).map(i=>i.value.trim()).filter(Boolean);
+  const patrimonios_kit=(document.getElementById('eq-patrimonios-kit')?.value||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean);
+  const acompanha=document.getElementById('eq-desc').value.trim();
+  const data={
+    nome,
+    marca:document.getElementById('eq-marca').value.trim(),
+    cat:document.getElementById('eq-cat').value,
+    diaria:parseFloat(document.getElementById('eq-diaria').value)||0,
+    estoque,
+    quantidade_total:estoque,
+    disponiveis,
+    indisponiveis,
+    em_manutencao,
+    kit:document.getElementById('eq-kit')?.value||'nao',
+    acompanha,
+    descricao:acompanha,
+    patrimonios,
+    patrimonios_kit,
+    ultima_atualizacao:new Date().toISOString()
+  };
   const editId=parseInt(document.getElementById('eq-edit-id').value);
   try{
     if(editId){
@@ -3550,8 +3613,8 @@ async function salvarEquip(){
       toast('Equipamento atualizado!','ok');
     }else{
       const res=await sb('equipamentos','POST',data);
-      cache.equipamentos.push(res[0]);
-      cache.equipamentos.sort((a,b)=>a.nome.localeCompare(b.nome));
+      cache.equipamentos.push((res&&res[0])?res[0]:{...data,id:Date.now()});
+      cache.equipamentos.sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
       toast('Equipamento salvo!','ok');
     }
     closeM('m-novo-eq');
@@ -3559,12 +3622,16 @@ async function salvarEquip(){
     document.getElementById('eq-modal-title').textContent='Novo equipamento';
     document.getElementById('eq-nome').value='';document.getElementById('eq-marca').value='';
     document.getElementById('eq-desc').value='';document.getElementById('eq-estoque').value=1;
+    if(document.getElementById('eq-disponiveis'))document.getElementById('eq-disponiveis').value=1;
+    if(document.getElementById('eq-indisponiveis'))document.getElementById('eq-indisponiveis').value=0;
+    if(document.getElementById('eq-manutencao'))document.getElementById('eq-manutencao').value=0;
+    if(document.getElementById('eq-kit'))document.getElementById('eq-kit').value='nao';
+    if(document.getElementById('eq-patrimonios-kit'))document.getElementById('eq-patrimonios-kit').value='';
     document.getElementById('patrimonios-lista').innerHTML='';
     atualizarFiltroMarca();
     renderEqs(document.getElementById('eq-search')?.value||'');
   }catch(e){toast('Erro: '+e.message,'err');}
 }
-
 async function delEq(id){
   if(!confirm('Excluir este equipamento?'))return;
   try{
