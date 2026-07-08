@@ -734,6 +734,10 @@ tr:hover td{background:var(--bg3)}
 <div id="m-nova-os" class="overlay">
   <div class="modal" style="width:820px">
     <div class="mh"><h2>Nova Ordem de Serviço</h2><button class="mclose" onclick="closeM('m-nova-os')">✕</button></div>
+    <div class="fg" style="max-width:160px;margin-bottom:12px">
+      <label>Nº da OS</label>
+      <input type="number" id="nos-numero" style="font-family:Arial,monospace;font-weight:600">
+    </div>
     <div class="g2" style="margin-bottom:12px">
       <div class="fg">
         <label>Cliente</label>
@@ -773,7 +777,10 @@ tr:hover td{background:var(--bg3)}
       <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <span style="font-size:12px;color:var(--text2)">Itens avulsos (frete, técnico, etc.)</span>
-          <button class="btn btn-g btn-sm" onclick="addAvulso('nos')">+ Adicionar</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-g btn-sm" onclick="abrirPatrimonioPicker('nos')">📦 Do patrimônio</button>
+            <button class="btn btn-g btn-sm" onclick="addAvulso('nos')">+ Adicionar</button>
+          </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 95px 70px 22px;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">
           <span>Descrição</span><span>Valor</span><span>C/ desc.?</span><span></span>
@@ -826,6 +833,7 @@ tr:hover td{background:var(--bg3)}
       <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <span style="font-size:12px;color:var(--text2)">Itens avulsos</span>
+          <button class="btn btn-g btn-sm" onclick="abrirPatrimonioPicker('eos')">📦 Do patrimônio</button>
           <button class="btn btn-g btn-sm" onclick="addAvulso('eos')">+ Adicionar</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 95px 70px 22px;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">
@@ -1009,6 +1017,15 @@ tr:hover td{background:var(--bg3)}
   <div class="modal" style="width:780px">
     <div class="mh"><h2 id="ficha-nome">Ficha do cliente</h2><button class="mclose" onclick="closeM('m-ficha-cli')">✕</button></div>
     <div id="ficha-content"></div>
+  </div>
+</div>
+
+<!-- Seletor de Patrimônio -->
+<div id="m-patr-picker" class="overlay">
+  <div class="modal">
+    <div class="mh"><h2>📦 Puxar do patrimônio</h2><button class="mclose" onclick="closeM('m-patr-picker')">✕</button></div>
+    <div class="fg"><input type="text" placeholder="Buscar por nome, patrimônio ou local..." oninput="renderPatrPickerLista(this.value)" id="patr-picker-search"></div>
+    <div id="patr-picker-lista" style="max-height:400px;overflow-y:auto;margin-top:10px"></div>
   </div>
 </div>
 
@@ -1213,7 +1230,7 @@ const SUPABASE_URL='https://bqqkplmfoumvjmwqwwgs.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxcWtwbG1mb3Vtdmptd3F3d2dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MTI0MDMsImV4cCI6MjA5NjA4ODQwM30.6_azTXQGfIvsqLxlyLeGDrmnCRmpZXMjln9CzezJ7Dg';
 
 // ===== CACHE / ESTADO =====
-const cache={equipamentos:[{id:1,nome:'Filmmaker',cat:'Kit',diaria:539,estoque:1,serial:'',descricao:'Sony A7III, Lente Sony 50mm e Hollyland Lark m2, SD Sandisk Extreme/Pro 128 gb',itensInclusos:[]},
+const SEED_EQUIPAMENTOS=[{id:1,nome:'Filmmaker',cat:'Kit',diaria:539,estoque:1,serial:'',descricao:'Sony A7III, Lente Sony 50mm e Hollyland Lark m2, SD Sandisk Extreme/Pro 128 gb',itensInclusos:[]},
 {id:2,nome:'Filmmaker Pro',cat:'Kit',diaria:863,estoque:1,serial:'',descricao:'Sonny FX30, Lente Sony 24-70mm, SD Sandisk Extreme/Pro 128 gb, Hollyland Lark Max',itensInclusos:[]},
 {id:3,nome:'Blackmagic Ursa Broadcast 6k G2',cat:'Câmera',diaria:1026,estoque:3,serial:'',descricao:'Opções de Bocal PL, EF ou B4',itensInclusos:[]},
 {id:4,nome:'Blackmagic Pocket Cinema Camera 6k Pro',cat:'Câmera',diaria:540,estoque:1,serial:'',descricao:'Kit com plate NP, fonte e Suporte p/ SSD',itensInclusos:[]},
@@ -1297,7 +1314,8 @@ const cache={equipamentos:[{id:1,nome:'Filmmaker',cat:'Kit',diaria:539,estoque:1
 {id:82,nome:'Kit c/3 Godox Lp600r 60w Led RGB',cat:'Iluminação',diaria:360,estoque:1,serial:'',descricao:'Case acompanha panela e fonte AC',itensInclusos:[]},
 {id:83,nome:'Bastão Nanlite Pavotube II 6c',cat:'Iluminação',diaria:81,estoque:4,serial:'',descricao:'',itensInclusos:[]},
 {id:84,nome:'Bastão LED Godox TL60 RGB',cat:'Iluminação',diaria:146,estoque:4,serial:'',descricao:'',itensInclusos:[]},
-{id:85,nome:'Softbox Nanlite 60 c/ grid',cat:'Iluminação',diaria:108,estoque:2,serial:'',descricao:'',itensInclusos:[]}],clientes:[],os:[]};
+{id:85,nome:'Softbox Nanlite 60 c/ grid',cat:'Iluminação',diaria:108,estoque:2,serial:'',descricao:'',itensInclusos:[]}];
+const cache={equipamentos:SEED_EQUIPAMENTOS,clientes:[],os:[],patrimonio:[]};
 let osFilter='todas',pgtoFilter='todos',osSearch='',eqView='grade';
 let currentOSId=null,currentOS=null;
 let nosSelEquip={},nosAvulsos=[];
@@ -1368,15 +1386,27 @@ async function sb(table,method='GET',body=null,qs=''){
 async function init(){
   setSyncStatus('connecting');
   try{
-    const[cs,os,osItens]=await Promise.all([
+    const[cs,os,osItens,eqs,patr]=await Promise.all([
       sb('clientes','GET',null,'?order=nome'),
       sb('ordens_servico','GET',null,'?order=numero.desc'),
-      sb('os_itens','GET',null,'?select=*')
+      sb('os_itens','GET',null,'?select=*'),
+      sb('equipamentos','GET',null,'?order=nome'),
+      sb('patrimonio_itens','GET',null,'?order=equipamento_nome').catch(()=>[])
     ]);
     cache.clientes=cs||[];
     const itensMap={};
     (osItens||[]).forEach(i=>{if(!itensMap[i.os_id])itensMap[i.os_id]=[];itensMap[i.os_id].push(i);});
     cache.os=(os||[]).map(o=>({...o,itens:itensMap[o.id]||[],itens_avulsos:o.itens_avulsos||[]}));
+    if(eqs && eqs.length){
+      cache.equipamentos=eqs;
+    } else {
+      try{
+        const semId=SEED_EQUIPAMENTOS.map(({id,itensInclusos,serial,...rest})=>rest);
+        const criados=await sb('equipamentos','POST',semId);
+        cache.equipamentos=criados&&criados.length?criados:SEED_EQUIPAMENTOS;
+      }catch(e){cache.equipamentos=SEED_EQUIPAMENTOS;}
+    }
+    cache.patrimonio=patr||[];
     setSyncStatus('online');
     await cancelarOsVencidas();
     renderDashboard();renderOS();renderEqs('');renderClientes('');populateCkSel();atualizarFiltroMarca();
@@ -2090,15 +2120,19 @@ async function cancelarOsVencidas(){
 async function autoRefresh(){
   try{
     const cliAntes=cache.clientes.length;
-    const[os,itens,clientes]=await Promise.all([
+    const[os,itens,clientes,eqs,patr]=await Promise.all([
       sb('ordens_servico','GET',null,'?order=numero.desc'),
       sb('os_itens','GET',null,'?select=*'),
-      sb('clientes','GET',null,'?order=nome')
+      sb('clientes','GET',null,'?order=nome'),
+      sb('equipamentos','GET',null,'?order=nome'),
+      sb('patrimonio_itens','GET',null,'?order=equipamento_nome').catch(()=>null)
     ]);
     const itensMap={};(itens||[]).forEach(i=>{if(!itensMap[i.os_id])itensMap[i.os_id]=[];itensMap[i.os_id].push(i);});
     cache.os=(os||[]).map(o=>({...o,itens:itensMap[o.id]||[],itens_avulsos:o.itens_avulsos||[]}));
     const cliNovos=(clientes||[]).filter(c=>!cache.clientes.find(x=>x.id===c.id));
     cache.clientes=clientes||[];
+    if(eqs && eqs.length){cache.equipamentos=eqs;renderEqs(document.getElementById('eq-search')?.value||'');atualizarFiltroMarca();}
+    if(patr){cache.patrimonio=patr;if(typeof renderPatrimonioTab==='function')renderPatrimonioTab();}
     // Notificar novos cadastros
     if(cliNovos.length>0){
       cliNovos.forEach(c=>{
@@ -2409,6 +2443,8 @@ function renderOS(q){
 // ===== NOVA OS =====
 function initNovaOS(){
   nosSelEquip={};nosAvulsos=[];
+  const maiorNum=cache.os.length?Math.max(...cache.os.map(o=>o.numero||0)):831;
+  document.getElementById('nos-numero').value=maiorNum+1;
   const today=new Date().toISOString().split('T')[0];
   document.getElementById('nos-ret').value=today;
   document.getElementById('nos-dev').value=today;
@@ -2596,11 +2632,10 @@ async function salvarOS(){
   if(!itens.length){toast('Adicione ao menos um equipamento','err');return;}
   const btn=document.getElementById('btn-salvar-nos');btn.disabled=true;btn.textContent='Salvando...';
   try{
-    // Pegar o maior número de OS existente no banco
-    const ultimaOS=await sb('ordens_servico','GET',null,'?select=numero&order=numero.desc&limit=1');
-    const num=((ultimaOS&&ultimaOS[0]?.numero)||831)+1;
-    // Atualizar contador
-    await sb('os_counter','PATCH',{ultimo_numero:num},'?id=eq.1');
+    const numInformado=parseInt(document.getElementById('nos-numero').value);
+    if(!numInformado||numInformado<=0){toast('Informe um número de OS válido','err');btn.disabled=false;btn.textContent='Salvar';return;}
+    if(cache.os.some(o=>o.numero===numInformado)){toast(`Já existe uma OS #${numInformado}. Escolha outro número.`,'err');btn.disabled=false;btn.textContent='Salvar';return;}
+    const num=numInformado;
     const novaOS=await sb('ordens_servico','POST',{
       numero:num,cliente_id:cliId,
       atendente:document.getElementById('nos-atendente').value||'—',
@@ -2860,6 +2895,76 @@ async function cancelarTaxaAtraso(){
     renderTaxaAtraso(o);renderOS();renderDashboard();
     toast('Taxa de atraso removida.');
   }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+let currentPatrCtx='nos';
+function itensStandalone(){
+  // Unidades completas alugáveis = linhas sem "kit_pai" preenchido
+  return (cache.patrimonio||[]).filter(p=>!p.kit_pai);
+}
+function pecasDoKit(nomeKit){
+  return (cache.patrimonio||[]).filter(p=>p.kit_pai&&normalizarTxt(p.kit_pai)===normalizarTxt(nomeKit));
+}
+function normalizarTxt(s){return(s||'').toString().trim().toLowerCase();}
+function abrirPatrimonioPicker(ctx){
+  currentPatrCtx=ctx;
+  openM('m-patr-picker');
+  document.getElementById('patr-picker-search').value='';
+  renderPatrPickerLista('');
+}
+function renderPatrPickerLista(q){
+  const termo=(q||'').toLowerCase().trim();
+  const cont=document.getElementById('patr-picker-lista');
+  if(!cont)return;
+  let lista=itensStandalone();
+  if(termo){
+    lista=lista.filter(p=>
+      (p.equipamento_nome||'').toLowerCase().includes(termo)||
+      (p.patrimonio||'').toLowerCase().includes(termo)||
+      (p.localizacao||'').toLowerCase().includes(termo)||
+      (p.categoria||'').toLowerCase().includes(termo)
+    );
+  }
+  if(!lista.length){
+    cont.innerHTML=`<p style="font-size:12px;color:var(--text3);padding:20px 0;text-align:center">Nenhum item de patrimônio encontrado.${!cache.patrimonio||!cache.patrimonio.length?'<br>A planilha de patrimônio ainda não foi sincronizada.':''}</p>`;
+    return;
+  }
+  cont.innerHTML=lista.map(p=>{
+    const pecas=pecasDoKit(p.equipamento_nome);
+    return `
+    <div style="border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;cursor:pointer" onclick="selecionarPatrimonio(${p.id})">
+        <div>
+          <div style="font-size:13px;font-weight:500">${p.equipamento_nome||'—'}</div>
+          <div style="font-size:11px;color:var(--text3)">Patrimônio ${p.patrimonio||'—'} · ${p.localizacao||'sem local'} ${p.categoria?'· '+p.categoria:''}</div>
+          ${p.observacao?`<div style="font-size:11px;color:var(--warning);margin-top:2px">⚠️ ${p.observacao}</div>`:''}
+        </div>
+        <span class="badge ${p.disponivel_locacao?'b-devolvido':'b-aberto'}" style="white-space:nowrap">${p.disponivel_locacao?'Disponível':'Indisponível'}</span>
+      </div>
+      ${pecas.length?`<div style="padding:0 12px 10px 12px">
+        <button class="btn btn-g btn-sm" style="font-size:11px" onclick="event.stopPropagation();togglePecasKit(this)">▸ Ver ${pecas.length} peça(s) deste kit</button>
+        <div class="pecas-kit-lista" style="display:none;margin-top:8px;padding-left:10px;border-left:2px solid var(--border)">
+          ${pecas.map(pc=>`<div style="font-size:11px;color:var(--text2);padding:3px 0">• ${pc.observacao||pc.equipamento_nome} <span style="color:var(--text3)">(${pc.patrimonio})</span></div>`).join('')}
+        </div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+function togglePecasKit(btn){
+  const div=btn.nextElementSibling;
+  const abrindo=div.style.display==='none';
+  div.style.display=abrindo?'block':'none';
+  btn.textContent=btn.textContent.replace(abrindo?'▸':'▾',abrindo?'▾':'▸');
+}
+function selecionarPatrimonio(id){
+  const p=(cache.patrimonio||[]).find(x=>x.id===id);
+  if(!p)return;
+  const arr=currentPatrCtx==='nos'?nosAvulsos:eosAvulsos;
+  arr.push({desc:`${p.equipamento_nome} (Patrimônio ${p.patrimonio}${p.localizacao?' - '+p.localizacao:''})`,valor:0,comDesconto:true});
+  renderAvulsoLista(currentPatrCtx);
+  if(currentPatrCtx==='nos')calcNosTotal();else calcEosTotal();
+  closeM('m-patr-picker');
+  toast('Item do patrimônio adicionado. Ajuste o valor antes de salvar.','ok');
 }
 
 function updateAssinaturaUI(assinado){
