@@ -310,7 +310,7 @@ tr:hover td{background:var(--bg3)}
         <span id="sync-text">Online</span>
       </div>
       <div class="version-badge-admin" style="display:block">
-        <strong>Blip Dashboard 1.0</strong><br>
+        <strong>Blip Dashboard 1.1</strong><br>
         Novo Supabase<br>
         <span id="last-sync">sem sync</span>
       </div>
@@ -415,7 +415,7 @@ tr:hover td{background:var(--bg3)}
       <div class="ph">
         <div>
           <h1>Equipamentos</h1>
-          <div class="equip-sync-note">Dados importados da Base Dashboard consolidada</div>
+          <div class="equip-sync-note">Dados importados da Base Dashboard • agora editável no sistema</div>
         </div>
         <button class="btn btn-g" onclick="loadEquipamentos()">Atualizar</button>
       </div>
@@ -487,6 +487,40 @@ tr:hover td{background:var(--bg3)}
     <div id="m-equip-body"></div>
   </div>
 </div>
+
+<div id="m-equip-edit" class="overlay">
+  <div class="modal">
+    <div class="mh"><h2>Editar equipamento</h2><button class="mclose" onclick="closeM('m-equip-edit')">✕</button></div>
+    <input type="hidden" id="edit-eq-id">
+    <div class="g2">
+      <div class="fg"><label>Nome</label><input id="edit-eq-nome"></div>
+      <div class="fg"><label>Categoria</label><input id="edit-eq-categoria"></div>
+    </div>
+    <div class="g4">
+      <div class="fg"><label>Valor diária</label><input id="edit-eq-diaria" type="number" step="0.01"></div>
+      <div class="fg"><label>Total</label><input id="edit-eq-total" type="number"></div>
+      <div class="fg"><label>Disponíveis</label><input id="edit-eq-disp" type="number"></div>
+      <div class="fg"><label>Manutenção</label><input id="edit-eq-manut" type="number"></div>
+    </div>
+    <div class="g2">
+      <div class="fg"><label>Indisponíveis</label><input id="edit-eq-ind" type="number"></div>
+      <div class="fg"><label>Kit?</label>
+        <select id="edit-eq-kit">
+          <option value="false">Não</option>
+          <option value="true">Sim</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>Acompanha / descrição do kit</label><textarea id="edit-eq-acompanha" rows="5"></textarea></div>
+    <div class="fg"><label>Patrimônios principais</label><textarea id="edit-eq-patrimonios" rows="4"></textarea></div>
+    <div class="fg"><label>Patrimônios do kit</label><textarea id="edit-eq-patrimonios-kit" rows="5"></textarea></div>
+    <div class="fg"><label>Status / diagnóstico interno</label><textarea id="edit-eq-diagnostico" rows="2"></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-g" onclick="closeM('m-equip-edit')">Cancelar</button>
+      <button class="btn btn-p" onclick="salvarEquipamentoEditado()">Salvar equipamento</button>
+    </div>
+  </div>
+
 
 <div id="m-cliente" class="overlay">
   <div class="modal" style="width:520px">
@@ -633,7 +667,7 @@ function renderEquipamentos(){
     <div><span class="badge b-devolvido">${e.disponiveis||0} disp.</span><div style="font-size:11px;color:var(--text3);margin-top:3px">Total: ${e.quantidade_total||0}</div></div>
     <div><span class="badge ${e.kit?'b-reservado':'b-na'}">${e.kit?'Sim':'Não'}</span></div>
     <div><span class="badge ${String(e.status_base||'').includes('🔴')?'b-cancelado':String(e.status_base||'').includes('🟡')?'b-pendente':'b-devolvido'}">${esc(e.status_base||'OK')}</span><div style="font-size:11px;color:var(--text3);margin-top:3px">${esc(e.diagnostico||'')}</div></div>
-    <div class="eq-actions"><button class="btn btn-g btn-sm" onclick="openEquip(${e.id})">Ver</button></div>
+    <div class="eq-actions"><button class="btn btn-g btn-sm" onclick="openEquip(${e.id})">Ver</button><button class="btn btn-p btn-sm" onclick="openEditEquip(${e.id})">Editar</button></div>
   </div>`).join('');
 }
 function fillEquipSelects(){
@@ -655,6 +689,63 @@ function openEquip(id){
     <div class="fg"><label>Patrimônios do kit</label><textarea rows="6" readonly>${esc(e.patrimonios_kit_texto||'')}</textarea></div>`;
   openM('m-equip');
 }
+
+function openEditEquip(id){
+  const e=equipamentos.find(x=>x.id===id); 
+  if(!e)return;
+  document.getElementById('edit-eq-id').value=e.id;
+  document.getElementById('edit-eq-nome').value=e.nome||'';
+  document.getElementById('edit-eq-categoria').value=e.categoria||'';
+  document.getElementById('edit-eq-diaria').value=e.diaria||0;
+  document.getElementById('edit-eq-total').value=e.quantidade_total||0;
+  document.getElementById('edit-eq-disp').value=e.disponiveis||0;
+  document.getElementById('edit-eq-ind').value=e.indisponiveis||0;
+  document.getElementById('edit-eq-manut').value=e.em_manutencao||0;
+  document.getElementById('edit-eq-kit').value=e.kit?'true':'false';
+  document.getElementById('edit-eq-acompanha').value=e.acompanha||'';
+  document.getElementById('edit-eq-patrimonios').value=e.patrimonios_texto||'';
+  document.getElementById('edit-eq-patrimonios-kit').value=e.patrimonios_kit_texto||'';
+  document.getElementById('edit-eq-diagnostico').value=e.diagnostico||'';
+  openM('m-equip-edit');
+}
+
+async function salvarEquipamentoEditado(){
+  try{
+    const id=document.getElementById('edit-eq-id').value;
+    if(!id)throw new Error('Equipamento não encontrado.');
+    const nome=document.getElementById('edit-eq-nome').value.trim();
+    if(!nome)throw new Error('Informe o nome do equipamento.');
+
+    const body={
+      nome,
+      categoria:document.getElementById('edit-eq-categoria').value.trim()||'Outro',
+      diaria:Number(document.getElementById('edit-eq-diaria').value||0),
+      quantidade_total:Number(document.getElementById('edit-eq-total').value||0),
+      disponiveis:Number(document.getElementById('edit-eq-disp').value||0),
+      indisponiveis:Number(document.getElementById('edit-eq-ind').value||0),
+      em_manutencao:Number(document.getElementById('edit-eq-manut').value||0),
+      kit:document.getElementById('edit-eq-kit').value==='true',
+      acompanha:document.getElementById('edit-eq-acompanha').value.trim(),
+      patrimonios_texto:document.getElementById('edit-eq-patrimonios').value.trim(),
+      patrimonios_kit_texto:document.getElementById('edit-eq-patrimonios-kit').value.trim(),
+      diagnostico:document.getElementById('edit-eq-diagnostico').value.trim(),
+      status_base:document.getElementById('edit-eq-diagnostico').value.trim()?'🟡 Atenção':'🟢 OK',
+      updated_at:new Date().toISOString()
+    };
+
+    await api('bd_equipamentos?id=eq.'+id,{
+      method:'PATCH',
+      headers:{Prefer:'return=minimal'},
+      body:JSON.stringify(body)
+    });
+
+    closeM('m-equip-edit');
+    await loadEquipamentos();
+    await loadResumo();
+    toast('Equipamento atualizado');
+  }catch(e){toast(e.message,'err')}
+}
+
 async function loadClientes(){clientes=await api('bd_clientes?select=*&ativo=eq.true&order=nome.asc');renderClientes()}
 function renderClientes(){
   const q=(document.getElementById('cli-search')?.value||'').toLowerCase();
