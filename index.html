@@ -555,9 +555,14 @@ async function api(path,opt={}){
 }
 function navPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const page=document.getElementById(id);
+  if(page) page.classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el) el.classList.add('active');
+  else {
+    const item=[...document.querySelectorAll('.ni')].find(n=>(n.getAttribute('onclick')||'').includes("'" + id + "'"));
+    if(item) item.classList.add('active');
+  }
   if(id==='admin') loadLogs();
 }
 function toggleTheme(){
@@ -608,7 +613,13 @@ async function loadEquipamentos(){
 }
 function renderCats(){
   const cats=[...new Set(equipamentos.map(e=>e.categoria||'Outro'))].sort();
-  document.getElementById('cat-tabs').innerHTML='<button class="stab '+(!catFiltro?'active':'')+'" onclick="setCat(\\'\\',this)">Todos</button>'+cats.map(c=>`<button class="stab ${catFiltro===c?'active':''}" onclick="setCat('${esc(c)}',this)">${esc(c)}</button>`).join('');
+  const tabs = ['<button class="stab '+(!catFiltro?'active':'')+'" data-cat="">Todos</button>']
+    .concat(cats.map(c => '<button class="stab '+(catFiltro===c?'active':'')+'" data-cat="'+esc(c)+'">'+esc(c)+'</button>'));
+  const wrap = document.getElementById('cat-tabs');
+  wrap.innerHTML = tabs.join('');
+  wrap.querySelectorAll('.stab').forEach(btn=>{
+    btn.onclick = function(){ setCat(this.getAttribute('data-cat') || '', this); };
+  });
 }
 function setCat(c,el){catFiltro=c;document.querySelectorAll('#cat-tabs .stab').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderEquipamentos()}
 function renderEquipamentos(){
@@ -711,7 +722,9 @@ async function loadLogs(){
   }catch(e){toast(e.message,'err')}
 }
 function entrarDemo(){document.getElementById('login-screen').style.display='none'}
-initTheme(); loadAll();
+initTheme();
+document.addEventListener('DOMContentLoaded',()=>{});
+loadAll().catch(e=>console.warn('Falha inicial:', e.message));
 </script>
 </body>
 </html>
