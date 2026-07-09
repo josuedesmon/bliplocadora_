@@ -310,7 +310,7 @@ tr:hover td{background:var(--bg3)}
         <span id="sync-text">Online</span>
       </div>
       <div class="version-badge-admin" style="display:block">
-        <strong>Blip Dashboard 1.1</strong><br>
+        <strong>Blip Dashboard 1.2</strong><br>
         Novo Supabase<br>
         <span id="last-sync">sem sync</span>
       </div>
@@ -415,7 +415,7 @@ tr:hover td{background:var(--bg3)}
       <div class="ph">
         <div>
           <h1>Equipamentos</h1>
-          <div class="equip-sync-note">Dados importados da Base Dashboard • agora editável no sistema</div>
+          <div class="equip-sync-note">Dados importados da Base Dashboard • se estiver vazio, rode o importador no Apps Script</div>
         </div>
         <button class="btn btn-g" onclick="loadEquipamentos()">Atualizar</button>
       </div>
@@ -580,6 +580,11 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 let equipamentos=[], clientes=[], ordens=[], logs=[], resumo=null, osFiltro='', catFiltro='';
 
+window.addEventListener('error', function(ev){
+  try{ toast('Erro no sistema: '+ev.message, 'err'); }catch(e){}
+});
+
+
 function headers(extra={}){return {apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':'application/json',...extra}}
 async function api(path,opt={}){
   if(SUPABASE_KEY.includes('COLE_AQUI')) throw new Error('Cole a anon key no index.html');
@@ -671,7 +676,9 @@ function renderEquipamentos(){
   </div>`).join('');
 }
 function fillEquipSelects(){
-  const opts=equipamentos.map(e=>`<option value="${e.id}">${esc(e.nome)} (${e.disponiveis||0} disp.)</option>`).join('');
+  const opts=equipamentos.length
+    ? equipamentos.map(e=>`<option value="${e.id}">${esc(e.nome)} (${e.disponiveis||0} disp.)</option>`).join('')
+    : '<option value="">Nenhum equipamento importado</option>';
   ['os-eq','disp-eq'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts});
 }
 function openEquip(id){
@@ -772,7 +779,15 @@ function renderDashOS(){
   const list=ordens.slice(0,8);
   document.getElementById('dash-os').innerHTML=list.length?list.map(o=>`<tr><td><b>#${o.numero}</b></td><td>${esc(o.cliente_nome||'')}</td><td>${dateBR(o.data_inicio)} → ${dateBR(o.data_fim)}</td><td>${money(o.total)}</td><td><span class="badge ${badgeStatus(o.status)}">${esc(o.status)}</span></td><td><button class="btn btn-g btn-sm">Ver</button></td></tr>`).join(''):'<tr><td colspan="6" class="clean-empty">Nenhuma OS recente.</td></tr>';
 }
-function openNovaOS(){fillEquipSelects();document.getElementById('os-alerta').innerHTML='';openM('m-os')}
+function openNovaOS(){
+  fillEquipSelects();
+  document.getElementById('os-alerta').innerHTML='';
+  const sel=document.getElementById('os-eq');
+  if(!equipamentos.length){
+    document.getElementById('os-alerta').innerHTML='<div class="conflict-box">⚠️ Nenhum equipamento importado ainda. Primeiro rode o importador da Base Dashboard para o Supabase.</div>';
+  }
+  openM('m-os');
+}
 async function conflitos(equipId,ini,fim){
   return await api('rpc/bd_conflitos_equipamento',{method:'POST',body:JSON.stringify({p_equipamento_id:Number(equipId),p_data_inicio:ini,p_data_fim:fim})});
 }
@@ -796,6 +811,7 @@ async function salvarOS(){
   try{
     const cliente=document.getElementById('os-cliente').value.trim(), status=document.getElementById('os-status').value, ini=document.getElementById('os-ini').value, fim=document.getElementById('os-fim').value, job=document.getElementById('os-job').value.trim();
     const equipId=Number(document.getElementById('os-eq').value), qtd=Number(document.getElementById('os-qtd').value||1), obs=document.getElementById('os-obs').value.trim();
+    if(!equipamentos.length)throw new Error('Nenhum equipamento importado ainda.');
     if(!cliente||!ini||!fim||!equipId)throw new Error('Preencha cliente, período e equipamento.');
     const num=Number(await api('rpc/bd_proximo_numero_ordem',{method:'POST',body:'{}'}));
     const eq=equipamentos.find(e=>e.id===equipId), dias=Math.max(1,Math.ceil((new Date(fim)-new Date(ini))/(1000*60*60*24))+1), subtotal=Number(eq.diaria||0)*qtd*dias;
