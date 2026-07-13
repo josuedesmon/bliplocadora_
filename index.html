@@ -310,7 +310,7 @@ tr:hover td{background:var(--bg3)}
         <span id="sync-text">Online</span>
       </div>
       <div class="version-badge-admin" style="display:block">
-        <strong>Blip Dashboard 1.3</strong><br>
+        <strong>Blip Dashboard 1.4</strong><br>
         Novo Supabase<br>
         <span id="last-sync">sem sync</span>
       </div>
@@ -333,8 +333,8 @@ tr:hover td{background:var(--bg3)}
           <div class="lemb-t">Pagamentos em aberto</div>
         </div>
         <div class="lemb" style="background:rgba(74,255,140,.12);border-left-color:var(--success)">
-          <div class="lemb-n" id="k-clientes">0 <span class="badge b-pago">novo</span></div>
-          <div class="lemb-t">Clientes cadastrados</div>
+          <div class="lemb-n" id="k-clientes">0</div>
+          <div class="lemb-t">Cadastros aguardando aprovação</div>
         </div>
         <div class="lemb" style="background:rgba(255,184,74,.12);border-left-color:var(--warning)">
           <div class="lemb-n" id="k-analise">0</div>
@@ -400,13 +400,24 @@ tr:hover td{background:var(--bg3)}
     <section id="clientes" class="page">
       <div class="ph">
         <h1>Clientes</h1>
-        <button class="btn btn-p" onclick="openCliente()">+ Novo cliente</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-g" onclick="sincronizarClientesAgora()">↻ Sincronizar Forms</button>
+          <button class="btn btn-p" onclick="openCliente()">+ Novo cliente</button>
+        </div>
       </div>
-      <div class="search-wrap"><input id="cli-search" placeholder="Buscar cliente..." oninput="renderClientes()"></div>
+
+      <div class="stabs" id="cli-tabs">
+        <button class="stab active" onclick="setClienteFiltro('',this)">Todos <span id="cli-count-todos">0</span></button>
+        <button class="stab" onclick="setClienteFiltro('analise',this)">Em análise <span id="cli-count-analise">0</span></button>
+        <button class="stab" onclick="setClienteFiltro('aprovado',this)">Aprovados <span id="cli-count-aprovado">0</span></button>
+        <button class="stab" onclick="setClienteFiltro('recusado',this)">Recusados <span id="cli-count-recusado">0</span></button>
+      </div>
+
+      <div class="search-wrap"><input id="cli-search" placeholder="Buscar nome, CPF/CNPJ, telefone ou empresa..." oninput="renderClientes()"></div>
       <div class="card">
         <table>
-          <thead><tr><th>Cliente</th><th>Contato</th><th>Status</th><th></th></tr></thead>
-          <tbody id="cli-list"><tr><td colspan="4" class="clean-empty">Carregando...</td></tr></tbody>
+          <thead><tr><th>Cliente</th><th>Contato</th><th>Cadastro</th><th>Status</th><th></th></tr></thead>
+          <tbody id="cli-list"><tr><td colspan="5" class="clean-empty">Carregando...</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -525,6 +536,42 @@ tr:hover td{background:var(--bg3)}
   </div>
 
 
+<div id="m-cliente-detalhe" class="overlay">
+  <div class="modal" style="width:900px">
+    <div class="mh"><h2 id="cli-det-title">Cadastro do cliente</h2><button class="mclose" onclick="closeM('m-cliente-detalhe')">✕</button></div>
+    <input type="hidden" id="cli-det-id">
+    <input type="hidden" id="cli-det-linha">
+
+    <div id="cli-det-status" style="margin-bottom:14px"></div>
+
+    <div class="g2">
+      <div>
+        <div id="cli-det-info"></div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:8px">Documentos</h3>
+        <div id="cli-det-docs"></div>
+      </div>
+    </div>
+
+    <div class="fg" style="margin-top:14px">
+      <label>Todas as respostas do formulário</label>
+      <div id="cli-det-raw" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:280px;overflow:auto"></div>
+    </div>
+
+    <div class="fg">
+      <label>Motivo da recusa (obrigatório para recusar)</label>
+      <textarea id="cli-motivo-recusa" rows="3" placeholder="Ex.: documento ilegível, cadastro incompleto..."></textarea>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-g" onclick="closeM('m-cliente-detalhe')">Fechar</button>
+      <button class="btn btn-d" onclick="alterarStatusCliente('recusado')">Recusar</button>
+      <button class="btn btn-s" onclick="alterarStatusCliente('aprovado')">Aprovar</button>
+    </div>
+  </div>
+</div>
+
 <div id="m-cliente" class="overlay">
   <div class="modal" style="width:520px">
     <div class="mh"><h2>Novo cliente</h2><button class="mclose" onclick="closeM('m-cliente')">✕</button></div>
@@ -579,10 +626,11 @@ tr:hover td{background:var(--bg3)}
 
 <script>
 const SUPABASE_URL = 'https://ysljabpskrcygkdjhldk.supabase.co';
+const CLIENTES_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCOz83S5LAuoEgbEFjv8LFe6q5GfqtCj3gxhLm2WovOI5Y9tCRiDZjIYL8VI8RhOgHVQ/exec';
 const APPS_SCRIPT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbyCOz83S5LAuoEgbEFjv8LFe6q5GfqtCj3gxhLm2WovOI5Y9tCRiDZjIYL8VI8RhOgHVQ/exec';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbGphYnBza3JjeWdrZGpobGRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTg1MzEsImV4cCI6MjA5OTE5NDUzMX0.TnrhUeNztFetVtXZLQ9zLPHvvQgbNLbJEIykCO2I_8o';
 
-let equipamentos=[], clientes=[], ordens=[], logs=[], resumo=null, osFiltro='', catFiltro='';
+let equipamentos=[], clientes=[], ordens=[], logs=[], resumo=null, osFiltro='', catFiltro='', clienteFiltro='';
 
 window.addEventListener('error', function(ev){
   try{ toast('Erro no sistema: '+ev.message, 'err'); }catch(e){}
@@ -639,7 +687,7 @@ async function loadAll(){
 async function loadResumo(){
   const r=await api('bd_resumo_dashboard?select=*');
   resumo=r[0]||{};
-  document.getElementById('k-clientes').innerHTML=(resumo.clientes_ativos||0)+' <span class="badge b-pago">novo</span>';
+  document.getElementById('k-clientes').textContent=resumo.clientes_em_analise||0;
   document.getElementById('k-analise').textContent=resumo.equipamentos_ativos||0;
   document.getElementById('st-alugado').textContent=resumo.reservas_ativas||0;
   document.getElementById('st-reservado').textContent=resumo.reservas_ativas||0;
@@ -648,6 +696,7 @@ async function loadResumo(){
   document.getElementById('an-eq').textContent=resumo.equipamentos_ativos||0;
   document.getElementById('an-un').textContent=resumo.unidades_total||0;
   document.getElementById('an-disp').textContent=resumo.unidades_disponiveis||0;
+  const anMan=document.getElementById('an-man');if(anMan)anMan.textContent=resumo.unidades_manutencao||0;
   document.getElementById('last-sync').textContent=resumo.ultima_sync_equipamentos?new Date(resumo.ultima_sync_equipamentos).toLocaleString('pt-BR'):'sem sync';
 }
 async function loadEquipamentos(){
@@ -757,21 +806,142 @@ async function salvarEquipamentoEditado(){
   }catch(e){toast(e.message,'err')}
 }
 
-async function loadClientes(){clientes=await api('bd_clientes?select=*&ativo=eq.true&order=nome.asc');renderClientes()}
+async function loadClientes(){
+  clientes=await api('bd_clientes?select=*&ativo=eq.true&order=data_cadastro.desc.nullslast,nome.asc');
+  atualizarContadoresClientes();
+  renderClientes();
+}
+
+function setClienteFiltro(status,el){
+  clienteFiltro=status;
+  document.querySelectorAll('#cli-tabs .stab').forEach(b=>b.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderClientes();
+}
+
+function atualizarContadoresClientes(){
+  const c=s=>clientes.filter(x=>x.status_cadastro===s).length;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+  set('cli-count-todos',clientes.length);
+  set('cli-count-analise',c('analise'));
+  set('cli-count-aprovado',c('aprovado'));
+  set('cli-count-recusado',c('recusado'));
+  const pend=c('analise');
+  const nb=document.getElementById('k-clientes');if(nb)nb.textContent=pend;
+}
+
 function renderClientes(){
   const q=(document.getElementById('cli-search')?.value||'').toLowerCase();
-  const list=clientes.filter(c=>!q||(c.nome||'').toLowerCase().includes(q)||(c.telefone||'').includes(q));
-  document.getElementById('cli-list').innerHTML=list.length?list.map(c=>`<tr><td><b>${esc(c.nome)}</b><div style="font-size:11px;color:var(--text3)">${esc(c.doc||'')}</div></td><td>${esc(c.telefone||'')}<div style="font-size:11px;color:var(--text3)">${esc(c.email||'')}</div></td><td><span class="cli-status cs-${esc(c.status_cadastro||'analise')}">${esc(c.status_cadastro||'analise')}</span></td><td></td></tr>`).join(''):'<tr><td colspan="4" class="clean-empty">Nenhum cliente cadastrado.</td></tr>';
+  const list=clientes.filter(c=>{
+    const texto=[c.nome,c.doc,c.telefone,c.email,c.representante_nome].join(' ').toLowerCase();
+    return (!clienteFiltro||c.status_cadastro===clienteFiltro)&&(!q||texto.includes(q));
+  });
+
+  document.getElementById('cli-list').innerHTML=list.length?list.map(c=>`<tr>
+    <td><b>${esc(c.nome)}</b><div style="font-size:11px;color:var(--text3)">${esc(c.doc||'')}</div></td>
+    <td>${esc(c.telefone||'')}<div style="font-size:11px;color:var(--text3)">${esc(c.email||'')}</div></td>
+    <td>${c.data_cadastro?new Date(c.data_cadastro).toLocaleString('pt-BR'):'--'}<div style="font-size:11px;color:var(--text3)">Linha ${c.origem_linha||'manual'}</div></td>
+    <td><span class="cli-status cs-${esc(c.status_cadastro||'analise')}">${esc(c.status_cadastro||'analise')}</span></td>
+    <td><button class="btn btn-g btn-sm" onclick="abrirCadastroCliente(${c.id})">Ver cadastro</button></td>
+  </tr>`).join(''):'<tr><td colspan="5" class="clean-empty">Nenhum cliente encontrado.</td></tr>';
 }
+
+function drivePreview(url){
+  const u=String(url||'');
+  const m=u.match(/(?:id=|\/d\/)([-\w]{20,})/);
+  return m?'https://drive.google.com/file/d/'+m[1]+'/preview':u;
+}
+
+function docCards(urls,titulo){
+  const arr=String(urls||'').split(/,\s*|\n/).map(x=>x.trim()).filter(Boolean);
+  if(!arr.length)return '<div style="color:var(--text3);font-size:12px">Não enviado.</div>';
+  return arr.map((u,i)=>`<div style="margin-bottom:12px">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px">${esc(titulo)} ${arr.length>1?i+1:''}</div>
+    <iframe src="${esc(drivePreview(u))}" style="width:100%;height:210px;border:1px solid var(--border);border-radius:8px;background:#fff"></iframe>
+    <a class="btn btn-g btn-sm" href="${esc(u)}" target="_blank" style="margin-top:5px;text-decoration:none">Abrir no Drive</a>
+  </div>`).join('');
+}
+
+function abrirCadastroCliente(id){
+  const c=clientes.find(x=>x.id===id);if(!c)return;
+  document.getElementById('cli-det-id').value=c.id;
+  document.getElementById('cli-det-linha').value=c.origem_linha||'';
+  document.getElementById('cli-det-title').textContent=c.nome;
+  document.getElementById('cli-motivo-recusa').value=c.motivo_recusa||'';
+  document.getElementById('cli-det-status').innerHTML=`<span class="cli-status cs-${esc(c.status_cadastro||'analise')}">${esc(c.status_cadastro||'analise')}</span>${c.motivo_recusa?'<span style="margin-left:8px;color:var(--danger)">'+esc(c.motivo_recusa)+'</span>':''}`;
+
+  const campos=[
+    ['CPF/CNPJ',c.doc],['Telefone',c.telefone],['E-mail',c.email],
+    ['Endereço',c.endereco],['Bairro/Cidade',c.cidade_bairro||c.bairro],['CEP',c.cep],
+    ['Representante',c.representante_nome],['CPF do representante',c.representante_cpf],
+    ['Data de nascimento',c.data_nascimento],['Profissão/Função',c.profissao],
+    ['Rede social',c.rede_social],['Nacionalidade',c.nacionalidade],
+    ['Estado civil',c.estado_civil],['Como conheceu',c.como_conheceu],
+    ['Referência 1',[c.referencia1_nome,c.referencia1_telefone].filter(Boolean).join(' - ')||c.referencia1],
+    ['Referência 2',[c.referencia2_nome,c.referencia2_telefone].filter(Boolean).join(' - ')||c.referencia2],
+    ['Observação interna',c.obs_interna]
+  ];
+  document.getElementById('cli-det-info').innerHTML=campos.filter(x=>x[1]).map(x=>`<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-size:11px;color:var(--text3)">${esc(x[0])}</div><div style="margin-top:2px;white-space:pre-wrap">${esc(x[1])}</div></div>`).join('');
+
+  document.getElementById('cli-det-docs').innerHTML=
+    docCards(c.comprovante_residencia,'Comprovante de residência')+
+    docCards(c.documento_foto,'Documento oficial');
+
+  const raw=c.raw_data||{};
+  document.getElementById('cli-det-raw').innerHTML=Object.entries(raw).filter(([k,v])=>String(v||'').trim()).map(([k,v])=>`<div style="padding:6px 0;border-bottom:1px solid var(--border)"><b style="font-size:11px;color:var(--text3)">${esc(k)}</b><div style="margin-top:2px;white-space:pre-wrap">${esc(v)}</div></div>`).join('');
+
+  openM('m-cliente-detalhe');
+}
+
+async function alterarStatusCliente(status){
+  try{
+    const id=document.getElementById('cli-det-id').value;
+    const linha=document.getElementById('cli-det-linha').value;
+    const motivo=document.getElementById('cli-motivo-recusa').value.trim();
+    if(status==='recusado'&&!motivo)throw new Error('Informe o motivo da recusa.');
+
+    const body={
+      status_cadastro:status,
+      motivo_recusa:status==='recusado'?motivo:'',
+      analisado_por:'Admin',
+      analisado_em:new Date().toISOString(),
+      updated_at:new Date().toISOString()
+    };
+
+    await api('bd_clientes?id=eq.'+id,{
+      method:'PATCH',
+      headers:{Prefer:'return=minimal'},
+      body:JSON.stringify(body)
+    });
+
+    if(linha&&CLIENTES_SCRIPT_URL){
+      const url=CLIENTES_SCRIPT_URL+'?acao=statusCliente&linha='+encodeURIComponent(linha)+'&status='+encodeURIComponent(status)+'&motivo='+encodeURIComponent(motivo)+'&t='+Date.now();
+      const img=new Image();img.src=url;
+    }
+
+    closeM('m-cliente-detalhe');
+    await loadClientes();
+    await loadResumo();
+    toast(status==='aprovado'?'Cadastro aprovado':'Cadastro recusado');
+  }catch(e){toast(e.message,'err')}
+}
+
+function sincronizarClientesAgora(){
+  if(!CLIENTES_SCRIPT_URL){toast('URL do Apps Script de clientes não configurada','err');return}
+  window.open(CLIENTES_SCRIPT_URL+'?acao=syncClientes&t='+Date.now(),'_blank');
+  setTimeout(async()=>{await loadClientes();await loadResumo()},4000);
+}
+
 function openCliente(){openM('m-cliente')}
 async function salvarCliente(){
   try{
     const body=[{nome:document.getElementById('cli-nome').value.trim(),telefone:document.getElementById('cli-tel').value.trim(),email:document.getElementById('cli-email').value.trim(),doc:document.getElementById('cli-doc').value.trim(),obs_interna:document.getElementById('cli-obs').value.trim(),status_cadastro:'analise'}];
     if(!body[0].nome)throw new Error('Informe o nome do cliente.');
     await api('bd_clientes',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(body)});
-    closeM('m-cliente'); await loadClientes(); await loadResumo(); toast('Cliente salvo');
+    closeM('m-cliente');await loadClientes();await loadResumo();toast('Cliente salvo');
   }catch(e){toast(e.message,'err')}
 }
+
 async function loadOrdens(){ordens=await api('bd_ordens?select=*&order=created_at.desc&limit=100');renderOrdens();renderDashOS()}
 function filterOS(s,el){osFiltro=s;document.querySelectorAll('#ordens .stab').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderOrdens()}
 function renderOrdens(){
