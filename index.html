@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blip Dashboard v1.5</title>
+<title>Blip Dashboard v1.6</title>
 <style>
 
 
@@ -311,7 +311,7 @@ tr:hover td{background:var(--bg3)}
         <span id="theme-label">Modo escuro</span>
       </div>
       <div class="sync-row"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Carregando...</span></div>
-      <div class="version-badge-admin" style="display:block"><strong>Blip Dashboard v1.5</strong><br><span id="last-sync">sem sync</span></div>
+      <div class="version-badge-admin" style="display:block"><strong>Blip Dashboard v1.6</strong><br><span id="last-sync">sem sync</span></div>
     </div>
   </aside>
 
@@ -453,11 +453,28 @@ tr:hover td{background:var(--bg3)}
 <!-- OS -->
 <div id="modal-os" class="overlay">
   <div class="modal" style="width:920px">
-    <div class="mh"><h2 id="os-modal-title">Nova OS / Pré-reserva</h2><button class="mclose" data-close="modal-os">✕</button></div>
+    <div class="mh"><div><h2 id="os-modal-title">Nova OS / Pré-reserva</h2><div style="font-size:11px;color:var(--text3);margin-top:3px">Cliente digitável • empresa e contato opcionais</div></div><button class="mclose" data-close="modal-os">✕</button></div>
     <input type="hidden" id="os-edit-id">
     <div class="g2">
-      <div class="fg"><label>Cliente</label><select id="os-client"></select></div>
+      <div class="fg">
+        <label>Cliente / responsável</label>
+        <input id="os-client-name" list="os-client-options" placeholder="Digite o nome do cliente">
+        <datalist id="os-client-options"></datalist>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Pode escolher um cadastro existente ou digitar um nome novo.</div>
+      </div>
       <div class="fg"><label>Status</label><select id="os-status"><option value="orcamento">Orçamento</option><option value="pre_reserva" selected>Pré-reserva</option><option value="reservada">Reservada</option><option value="alugada">Alugada</option></select></div>
+    </div>
+    <div class="g2">
+      <div class="fg">
+        <label>Empresa (opcional)</label>
+        <input id="os-company-name" list="os-company-options" placeholder="Ex.: AudioEquipe">
+        <datalist id="os-company-options"></datalist>
+      </div>
+      <div class="fg">
+        <label>Contato da empresa (opcional)</label>
+        <input id="os-contact-name" list="os-contact-options" placeholder="Ex.: Leandro">
+        <datalist id="os-contact-options"></datalist>
+      </div>
     </div>
     <div class="g3">
       <div class="fg"><label>Início</label><input type="date" id="os-start"></div>
@@ -487,7 +504,7 @@ const SUPABASE_URL="https://ysljabpskrcygkdjhldk.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbGphYnBza3JjeWdrZGpobGRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTg1MzEsImV4cCI6MjA5OTE5NDUzMX0.TnrhUeNztFetVtXZLQ9zLPHvvQgbNLbJEIykCO2I_8o";
 const CLIENT_SCRIPT_URL="https://script.google.com/macros/s/AKfycbyCOz83S5LAuoEgbEFjv8LFe6q5GfqtCj3gxhLm2WovOI5Y9tCRiDZjIYL8VI8RhOgHVQ/exec";
 
-const state={equipments:[],clients:[],orders:[],summary:{},clientFilter:'',orderFilter:'',osItems:[]};
+const state={equipments:[],clients:[],companies:[],contacts:[],orders:[],summary:{},clientFilter:'',orderFilter:'',osItems:[]};
 
 function h(extra={}){return {apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':'application/json',...extra}}
 async function api(path,options={}){
@@ -518,7 +535,7 @@ function showPage(id,navEl=null){
 
 async function loadAll(){
  try{
-  await Promise.all([loadSummary(),loadEquipments(),loadClients(),loadOrders()]);
+  await Promise.all([loadSummary(),loadEquipments(),loadClients(),loadCompaniesContacts(),loadOrders()]);
   $('sync-dot').style.background='var(--success)';$('sync-text').textContent='Online';
  }catch(e){console.error(e);$('sync-dot').style.background='var(--danger)';$('sync-text').textContent='Erro';toast(e.message,'err')}
 }
@@ -588,9 +605,28 @@ function renderClients(){
  document.querySelectorAll('[data-client-id]').forEach(b=>b.onclick=()=>openClient(Number(b.dataset.clientId)));
 }
 function fillClientSelect(){
- const approved=state.clients.filter(c=>c.status_cadastro==='aprovado');
- const list=approved.length?approved:state.clients;
- $('os-client').innerHTML=list.map(c=>`<option value="${c.id}">${esc(c.nome)} — ${esc(c.status_cadastro||'')}</option>`).join('')||'<option value="">Nenhum cliente</option>';
+ const options=state.clients.map(c=>`<option value="${esc(c.nome)}">${esc(c.status_cadastro||'')}</option>`).join('');
+ $('os-client-options').innerHTML=options;
+}
+
+async function loadCompaniesContacts(){
+ try{
+  state.companies=await api('bd_empresas?select=*&ativo=eq.true&order=nome.asc');
+  state.contacts=await api('bd_contatos?select=*&ativo=eq.true&order=nome.asc');
+ }catch(e){
+  state.companies=[];
+  state.contacts=[];
+  console.warn('Empresas/contatos ainda não instalados:',e.message);
+ }
+ fillCompanyContactLists();
+}
+
+function fillCompanyContactLists(){
+ $('os-company-options').innerHTML=state.companies.map(c=>`<option value="${esc(c.nome)}"></option>`).join('');
+ const companyName=($('os-company-name')?.value||'').trim().toLowerCase();
+ const company=state.companies.find(c=>(c.nome||'').toLowerCase()===companyName);
+ const contacts=company?state.contacts.filter(c=>Number(c.empresa_id)===Number(company.id)):state.contacts;
+ $('os-contact-options').innerHTML=contacts.map(c=>`<option value="${esc(c.nome)}"></option>`).join('');
 }
 function drivePreview(url){const m=String(url||'').match(/(?:id=|\/d\/)([-\w]{20,})/);return m?'https://drive.google.com/file/d/'+m[1]+'/preview':url}
 function docsHtml(url,label){
@@ -629,15 +665,15 @@ async function loadOrders(){
 }
 function renderOrders(){
  const list=state.orders.filter(o=>!state.orderFilter||o.status===state.orderFilter);
- $('os-list').innerHTML=list.length?list.map(o=>`<tr><td><b>#${o.numero}</b></td><td>${esc(o.cliente_nome||'')}</td><td>${esc(o.job||'')}</td><td>${dateBR(o.data_inicio)} → ${dateBR(o.data_fim)}</td><td>${money(o.total)}</td><td><span class="badge ${statusBadge(o.status)}">${esc(o.status)}</span></td><td><button class="btn btn-g btn-sm" data-order-id="${o.id}">Ver</button></td></tr>`).join(''):'<tr><td colspan="7" class="clean-empty">Nenhuma OS.</td></tr>';
+ $('os-list').innerHTML=list.length?list.map(o=>`<tr><td><b>#${o.numero}</b></td><td>${esc(o.empresa_nome||o.cliente_nome||'')}<div style="font-size:11px;color:var(--text3)">${esc(o.contato_nome||(!o.empresa_nome?o.cliente_nome:'')||'')}</div></td><td>${esc(o.job||'')}</td><td>${dateBR(o.data_inicio)} → ${dateBR(o.data_fim)}</td><td>${money(o.total)}</td><td><span class="badge ${statusBadge(o.status)}">${esc(o.status)}</span></td><td><button class="btn btn-g btn-sm" data-order-id="${o.id}">Ver</button></td></tr>`).join(''):'<tr><td colspan="7" class="clean-empty">Nenhuma OS.</td></tr>';
 }
 function renderDashOrders(){
  const list=state.orders.slice(0,8);
- $('dash-os-list').innerHTML=list.length?list.map(o=>`<tr><td><b>#${o.numero}</b></td><td>${esc(o.cliente_nome||'')}</td><td>${dateBR(o.data_inicio)} → ${dateBR(o.data_fim)}</td><td>${money(o.total)}</td><td><span class="badge ${statusBadge(o.status)}">${esc(o.status)}</span></td><td></td></tr>`).join(''):'<tr><td colspan="6" class="clean-empty">Nenhuma OS.</td></tr>';
+ $('dash-os-list').innerHTML=list.length?list.map(o=>`<tr><td><b>#${o.numero}</b></td><td>${esc(o.empresa_nome||o.cliente_nome||'')}<div style="font-size:11px;color:var(--text3)">${esc(o.contato_nome||(!o.empresa_nome?o.cliente_nome:'')||'')}</div></td><td>${dateBR(o.data_inicio)} → ${dateBR(o.data_fim)}</td><td>${money(o.total)}</td><td><span class="badge ${statusBadge(o.status)}">${esc(o.status)}</span></td><td></td></tr>`).join(''):'<tr><td colspan="6" class="clean-empty">Nenhuma OS.</td></tr>';
 }
 function openNewOS(){
  if(!state.equipments.length){toast('Nenhum equipamento importado.','err');return}
- state.osItems=[];$('os-edit-id').value='';$('os-modal-title').textContent='Nova OS / Pré-reserva';$('os-status').value='pre_reserva';$('os-job').value='';$('os-notes').value='';$('os-discount').value='0';$('os-conflicts').innerHTML='';addOSItem();renderOSItems();openModal('modal-os');
+ state.osItems=[];$('os-edit-id').value='';$('os-modal-title').textContent='Nova OS / Pré-reserva';$('os-status').value='pre_reserva';$('os-client-name').value='';$('os-company-name').value='';$('os-contact-name').value='';$('os-job').value='';$('os-notes').value='';$('os-discount').value='0';$('os-conflicts').innerHTML='';addOSItem();renderOSItems();openModal('modal-os');
 }
 function addOSItem(item=null){state.osItems.push(item||{equipment_id:state.equipments[0]?.id||0,quantity:1,daily:Number(state.equipments[0]?.diaria||0)});renderOSItems()}
 function renderOSItems(){
@@ -660,13 +696,20 @@ async function checkConflicts(items=state.osItems,start=$('os-start').value,end=
 }
 async function saveOS(){
  try{
-  const clientId=Number($('os-client').value),client=state.clients.find(c=>c.id===clientId),start=$('os-start').value,end=$('os-end').value;
-  if(!client||!start||!end||!state.osItems.length)throw new Error('Preencha cliente, período e equipamentos.');
+  const clientName=$('os-client-name').value.trim();
+  const companyName=$('os-company-name').value.trim();
+  const contactName=$('os-contact-name').value.trim();
+  const client=state.clients.find(c=>(c.nome||'').trim().toLowerCase()===clientName.toLowerCase());
+  const company=state.companies.find(c=>(c.nome||'').trim().toLowerCase()===companyName.toLowerCase());
+  const contact=state.contacts.find(c=>(c.nome||'').trim().toLowerCase()===contactName.toLowerCase() && (!company || Number(c.empresa_id)===Number(company.id)));
+  const start=$('os-start').value,end=$('os-end').value;
+  if(!clientName&&!companyName)throw new Error('Digite o cliente ou a empresa.');
+  if(!start||!end||!state.osItems.length)throw new Error('Preencha período e equipamentos.');
   const conflicts=await checkConflicts();
   if(conflicts.length&&$('os-status').value!=='pre_reserva'){$('os-status').value='pre_reserva';$('os-conflicts').innerHTML='<div class="notice warn">Existem conflitos. A OS foi alterada para pré-reserva.</div>'}
   const {days,sub,total,disc}=calcOS();
   const num=Number(await api('rpc/bd_proximo_numero_ordem',{method:'POST',body:'{}'}));
-  const inserted=await api('bd_ordens',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([{numero:num,cliente_id:client.id,cliente_nome:client.nome,atendente:$('os-attendant').value.trim(),job:$('os-job').value.trim(),data_inicio:start,data_fim:end,status:$('os-status').value,desconto:disc,subtotal:sub,total,pagamento:$('os-payment').value,observacao:$('os-notes').value.trim(),alerta_disponibilidade:conflicts.length?JSON.stringify(conflicts):''}])});
+  const inserted=await api('bd_ordens',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([{numero:num,cliente_id:client?client.id:null,cliente_nome:clientName||contactName||companyName,cliente_digitado:clientName,empresa_id:company?company.id:null,empresa_nome:companyName,contato_id:contact?contact.id:null,contato_nome:contactName,atendente:$('os-attendant').value.trim(),job:$('os-job').value.trim(),data_inicio:start,data_fim:end,status:$('os-status').value,desconto:disc,subtotal:sub,total,pagamento:$('os-payment').value,observacao:$('os-notes').value.trim(),alerta_disponibilidade:conflicts.length?JSON.stringify(conflicts):''}])});
   const orderId=inserted[0].id;
   const items=state.osItems.map(it=>{const e=state.equipments.find(x=>x.id===Number(it.equipment_id));return {ordem_id:orderId,equipamento_id:e.id,equip_key:e.equip_key,equipamento_nome:e.nome,quantidade:Number(it.quantity),diaria:Number(e.diaria||0),dias:days,subtotal:Number(e.diaria||0)*Number(it.quantity)*days}});
   await api('bd_ordem_itens',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(items)});
@@ -691,6 +734,7 @@ function bind(){
  $('btn-new-os').onclick=openNewOS;$('btn-new-os-2').onclick=openNewOS;$('btn-add-os-item').onclick=()=>addOSItem();$('btn-save-os').onclick=saveOS;
  ['os-start','os-end','os-discount'].forEach(id=>$(id).addEventListener('input',calcOS));
  $('btn-check-disp').onclick=checkAvailability;
+ $('os-company-name').addEventListener('input',fillCompanyContactLists);
  $('equip-search').oninput=renderEquipments;$('client-search').oninput=renderClients;
  $('client-tabs').querySelectorAll('.stab').forEach(b=>b.onclick=()=>{state.clientFilter=b.dataset.status;document.querySelectorAll('#client-tabs .stab').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderClients()});
  $('os-tabs').querySelectorAll('.stab').forEach(b=>b.onclick=()=>{state.orderFilter=b.dataset.status;document.querySelectorAll('#os-tabs .stab').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderOrders()});
