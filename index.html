@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blip Dashboard v1.6</title>
+<title>Blip Dashboard v1.7</title>
 <style>
 
 
@@ -287,6 +287,16 @@ tr:hover td{background:var(--bg3)}
   .os-item-row{grid-template-columns:1fr 70px 80px 32px}
 }
 
+
+/* ===== v1.7 OS operacional ===== */
+.picker-tools{display:flex;gap:8px;margin-bottom:10px}.picker-table{max-height:430px;overflow:auto;border:1px solid var(--border);border-radius:10px}
+.picker-row{display:grid;grid-template-columns:2fr 100px 90px 100px;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)}
+.manual-row{display:grid;grid-template-columns:1.6fr 80px 110px 120px 36px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.doc-actions{display:flex;gap:8px;flex-wrap:wrap}.os-doc{background:#fff;color:#111;border-radius:10px;padding:26px 30px;font-family:Arial,sans-serif}
+.os-doc table,.os-doc h1,.os-doc h2,.os-doc h3{color:#111}.os-doc .muted{color:#666}.summary-box{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:900px){.picker-row{grid-template-columns:1fr 80px}.picker-row>div:nth-child(3),.picker-row>div:nth-child(4){display:none}.manual-row{grid-template-columns:1fr 70px 90px 36px}.manual-row>select{display:none}.summary-box{grid-template-columns:1fr 1fr}}
+@media print{body *{visibility:hidden!important}#print-area,#print-area *{visibility:visible!important}#print-area{position:absolute;left:0;top:0;width:100%;background:#fff!important;color:#111!important}.no-print{display:none!important}}
+
 </style>
 </head>
 <body>
@@ -311,7 +321,7 @@ tr:hover td{background:var(--bg3)}
         <span id="theme-label">Modo escuro</span>
       </div>
       <div class="sync-row"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Carregando...</span></div>
-      <div class="version-badge-admin" style="display:block"><strong>Blip Dashboard v1.6</strong><br><span id="last-sync">sem sync</span></div>
+      <div class="version-badge-admin" style="display:block"><strong>Blip Dashboard v1.7</strong><br><span id="last-sync">sem sync</span></div>
     </div>
   </aside>
 
@@ -397,7 +407,22 @@ tr:hover td{background:var(--bg3)}
       </div>
     </section>
 
-    <section id="admin" class="page">
+    
+    <section id="os-detalhe" class="page">
+      <div class="ph">
+        <div><button class="btn btn-g btn-sm no-print" id="btn-back-orders">← Voltar</button><h1 style="margin-top:10px" id="detail-os-title">OS</h1></div>
+        <div class="doc-actions no-print">
+          <button class="btn btn-g" id="btn-edit-order">✏️ Editar</button>
+          <button class="btn btn-g" id="btn-print-order">🖨️ Imprimir / PDF</button>
+          <button class="btn btn-g" id="btn-download-order">⬇ Baixar HTML</button>
+          <button class="btn btn-g" id="btn-view-contract">📄 Contrato</button>
+          <button class="btn btn-d" id="btn-cancel-order">Cancelar OS</button>
+        </div>
+      </div>
+      <div id="order-detail-content"></div>
+    </section>
+
+<section id="admin" class="page">
       <div class="ph"><h1>Importar / Admin</h1><button class="btn btn-g" id="btn-logs">Atualizar logs</button></div>
       <div class="card" style="margin-bottom:14px">
         <h2>Status do sistema</h2>
@@ -484,11 +509,14 @@ tr:hover td{background:var(--bg3)}
     <div class="g3">
       <div class="fg"><label>Atendente</label><input id="os-attendant" value="Admin"></div>
       <div class="fg"><label>Desconto (%)</label><input type="number" min="0" max="100" step="0.01" id="os-discount" value="0"></div>
-      <div class="fg"><label>Pagamento</label><select id="os-payment"><option value="em_aberto">Em aberto</option><option value="pago">Pago</option><option value="na">N/A</option></select></div>
+      <div class="fg"><label>Tipo</label><select id="os-type"><option value="locacao">Locação</option><option value="emprestimo">Empréstimo</option><option value="orcamento">Orçamento</option></select><input type="hidden" id="os-payment" value="em_aberto"></div>
     </div>
     <h3 style="margin-bottom:8px">Equipamentos</h3>
     <div class="os-items" id="os-items"></div>
-    <button class="btn btn-g btn-sm" id="btn-add-os-item">+ Adicionar equipamento</button>
+    <button class="btn btn-g btn-sm" id="btn-add-os-item">+ Escolher equipamento</button>
+    <h3 style="margin:16px 0 8px">Itens manuais / serviços</h3>
+    <div class="os-items" id="os-manual-items"></div>
+    <button class="btn btn-g btn-sm" id="btn-add-manual-item">+ Item manual</button>
     <div id="os-conflicts"></div>
     <div class="fg" style="margin-top:14px"><label>Observação</label><textarea id="os-notes" rows="3"></textarea></div>
     <div class="card" style="padding:12px;margin-bottom:14px"><div style="display:flex;justify-content:space-between"><span>Subtotal</span><b id="os-subtotal">R$ 0,00</b></div><div style="display:flex;justify-content:space-between;margin-top:5px"><span>Total</span><b id="os-total">R$ 0,00</b></div></div>
@@ -496,6 +524,21 @@ tr:hover td{background:var(--bg3)}
   </div>
 </div>
 
+
+<div id="modal-equip-picker" class="overlay">
+  <div class="modal" style="width:850px">
+    <div class="mh"><h2>Adicionar equipamento</h2><button class="mclose" data-close="modal-equip-picker">✕</button></div>
+    <div class="picker-tools"><input id="equip-picker-search" placeholder="Digite FX30, Starlink, lente..."></div>
+    <div class="picker-table" id="equip-picker-list"></div>
+  </div>
+</div>
+<div id="modal-contract" class="overlay">
+  <div class="modal" style="width:900px">
+    <div class="mh"><h2>Contrato da locação</h2><button class="mclose" data-close="modal-contract">✕</button></div>
+    <div class="doc-actions no-print" style="margin-bottom:12px"><button class="btn btn-g" id="btn-print-contract">🖨️ Imprimir / PDF</button><button class="btn btn-g" id="btn-download-contract">⬇ Baixar HTML</button></div>
+    <div id="contract-content"></div>
+  </div>
+</div>
 <div id="toast" class="toast"></div>
 
 <script>
@@ -504,7 +547,7 @@ const SUPABASE_URL="https://ysljabpskrcygkdjhldk.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbGphYnBza3JjeWdrZGpobGRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTg1MzEsImV4cCI6MjA5OTE5NDUzMX0.TnrhUeNztFetVtXZLQ9zLPHvvQgbNLbJEIykCO2I_8o";
 const CLIENT_SCRIPT_URL="https://script.google.com/macros/s/AKfycbyCOz83S5LAuoEgbEFjv8LFe6q5GfqtCj3gxhLm2WovOI5Y9tCRiDZjIYL8VI8RhOgHVQ/exec";
 
-const state={equipments:[],clients:[],companies:[],contacts:[],orders:[],summary:{},clientFilter:'',orderFilter:'',osItems:[]};
+const state={equipments:[],clients:[],companies:[],contacts:[],orders:[],summary:{},clientFilter:'',orderFilter:'',osItems:[],manualItems:[],currentOrder:null,currentOrderItems:[],currentManualItems:[]};
 
 function h(extra={}){return {apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':'application/json',...extra}}
 async function api(path,options={}){
@@ -660,33 +703,85 @@ async function saveManualClient(){
  }catch(e){toast(e.message,'err')}
 }
 
+
+function resolveClientCompanyFromTyped(){
+ const typed=($('os-client-name').value||'').trim().toLowerCase();
+ if(!typed)return;
+ const company=state.companies.find(c=>(c.nome||'').trim().toLowerCase()===typed);
+ if(company){$('os-company-name').value=company.nome;$('os-client-name').value='';fillCompanyContactLists();return}
+ const contact=state.contacts.find(c=>(c.nome||'').trim().toLowerCase()===typed);
+ if(contact){const comp=state.companies.find(c=>Number(c.id)===Number(contact.empresa_id));if(comp)$('os-company-name').value=comp.nome;$('os-contact-name').value=contact.nome;fillCompanyContactLists()}
+}
+
 async function loadOrders(){
  state.orders=await api('bd_ordens?select=*&order=created_at.desc&limit=200');renderOrders();renderDashOrders();$('nb-os').textContent=state.orders.length;
 }
 function renderOrders(){
  const list=state.orders.filter(o=>!state.orderFilter||o.status===state.orderFilter);
- $('os-list').innerHTML=list.length?list.map(o=>`<tr><td><b>#${o.numero}</b></td><td>${esc(o.empresa_nome||o.cliente_nome||'')}<div style="font-size:11px;color:var(--text3)">${esc(o.contato_nome||(!o.empresa_nome?o.cliente_nome:'')||'')}</div></td><td>${esc(o.job||'')}</td><td>${dateBR(o.data_inicio)} → ${dateBR(o.data_fim)}</td><td>${money(o.total)}</td><td><span class="badge ${statusBadge(o.status)}">${esc(o.status)}</span></td><td><button class="btn btn-g btn-sm" data-order-id="${o.id}">Ver</button></td></tr>`).join(''):'<tr><td colspan="7" class="clean-empty">Nenhuma OS.</td></tr>';
-}
-function renderDashOrders(){
+ $('os-list').innerHTML=list.length?list.map(o=>`<tr><td><b>#${o.numero}</b></td><td>${esc(o.empresa_nome||o.cliente_nome||'')}<div style="font-size:11px;color:var(--text3)">${esc(o.contato_nome||(!o.empresa_nome?o.cliente_nome:'')||'')}</div></td><td>${esc(o.job||'')}</td><td>${dateBR(o.data_inicio)} → ${dateBR(o.data_fim)}</td><td>${money(o.total)}</td><td><span class="badge ${statusBadge(o.status)}">${esc(o.status)}</span></td><td><button class="btn btn-g btn-sm" data-order-id="${o.id}">Abrir</button></td></tr>`).join(''):'<tr><td colspan="7" class="clean-empty">Nenhuma OS.</td></tr>';
+
+ document.querySelectorAll('[data-order-id]').forEach(b=>b.onclick=()=>openOrder(Number(b.dataset.orderId)));
+}function renderDashOrders(){
  const list=state.orders.slice(0,8);
  $('dash-os-list').innerHTML=list.length?list.map(o=>`<tr><td><b>#${o.numero}</b></td><td>${esc(o.empresa_nome||o.cliente_nome||'')}<div style="font-size:11px;color:var(--text3)">${esc(o.contato_nome||(!o.empresa_nome?o.cliente_nome:'')||'')}</div></td><td>${dateBR(o.data_inicio)} → ${dateBR(o.data_fim)}</td><td>${money(o.total)}</td><td><span class="badge ${statusBadge(o.status)}">${esc(o.status)}</span></td><td></td></tr>`).join(''):'<tr><td colspan="6" class="clean-empty">Nenhuma OS.</td></tr>';
 }
 function openNewOS(){
  if(!state.equipments.length){toast('Nenhum equipamento importado.','err');return}
- state.osItems=[];$('os-edit-id').value='';$('os-modal-title').textContent='Nova OS / Pré-reserva';$('os-status').value='pre_reserva';$('os-client-name').value='';$('os-company-name').value='';$('os-contact-name').value='';$('os-job').value='';$('os-notes').value='';$('os-discount').value='0';$('os-conflicts').innerHTML='';addOSItem();renderOSItems();openModal('modal-os');
+ state.osItems=[];state.manualItems=[];
+ $('os-edit-id').value='';$('os-modal-title').textContent='Nova OS / Pré-reserva';
+ $('os-status').value='pre_reserva';$('os-type').value='locacao';$('os-payment').value='em_aberto';
+ $('os-client-name').value='';$('os-company-name').value='';$('os-contact-name').value='';
+ $('os-job').value='';$('os-notes').value='';$('os-discount').value='0';$('os-conflicts').innerHTML='';
+ renderOSItems();renderManualItems();calcOS();openModal('modal-os');
 }
-function addOSItem(item=null){state.osItems.push(item||{equipment_id:state.equipments[0]?.id||0,quantity:1,daily:Number(state.equipments[0]?.diaria||0)});renderOSItems()}
+function openEquipmentPicker(){
+ $('equip-picker-search').value='';renderEquipmentPicker();openModal('modal-equip-picker');
+}
+function renderEquipmentPicker(){
+ const q=($('equip-picker-search').value||'').toLowerCase();
+ const list=state.equipments.filter(e=>!q||[e.nome,e.categoria].join(' ').toLowerCase().includes(q));
+ $('equip-picker-list').innerHTML=list.length?list.map(e=>`<div class="picker-row">
+  <div><b>${esc(e.nome)}</b><div style="font-size:11px;color:var(--text3)">${esc(e.categoria||'Outro')}</div></div>
+  <div>${money(e.diaria)}</div><div><span class="badge b-devolvido">${e.disponiveis||0} disp.</span></div>
+  <div><button class="btn btn-p btn-sm" data-pick-equip="${e.id}">Adicionar</button></div></div>`).join(''):'<div class="clean-empty">Nenhum equipamento encontrado.</div>';
+ document.querySelectorAll('[data-pick-equip]').forEach(b=>b.onclick=()=>{
+  const e=state.equipments.find(x=>x.id===Number(b.dataset.pickEquip));const current=state.osItems.find(x=>Number(x.equipment_id)===Number(e.id));
+  if(current)current.quantity+=1;else state.osItems.push({equipment_id:e.id,quantity:1,daily:Number(e.diaria||0)});
+  renderOSItems();calcOS();closeModal('modal-equip-picker');
+ });
+}
 function renderOSItems(){
- $('os-items').innerHTML=state.osItems.map((it,i)=>{const opts=state.equipments.map(e=>`<option value="${e.id}" ${Number(e.id)===Number(it.equipment_id)?'selected':''}>${esc(e.nome)} (${e.disponiveis||0} disp.)</option>`).join('');return `<div class="os-item-row"><select data-os-equip="${i}">${opts}</select><input type="number" min="1" value="${it.quantity}" data-os-qty="${i}"><div>${money(it.daily)}</div><button class="btn btn-d btn-sm" data-os-remove="${i}">✕</button></div>`}).join('');
- document.querySelectorAll('[data-os-equip]').forEach(el=>el.onchange=()=>{const i=Number(el.dataset.osEquip),eq=state.equipments.find(e=>e.id===Number(el.value));state.osItems[i].equipment_id=Number(el.value);state.osItems[i].daily=Number(eq?.diaria||0);renderOSItems();calcOS()});
+ $('os-items').innerHTML=state.osItems.length?state.osItems.map((it,i)=>{const e=state.equipments.find(x=>x.id===Number(it.equipment_id));return `<div class="os-item-row">
+  <div><b>${esc(e?.nome||'Equipamento')}</b><div style="font-size:11px;color:var(--text3)">${esc(e?.categoria||'')}</div></div>
+  <input type="number" min="1" value="${it.quantity}" data-os-qty="${i}"><div>${money(it.daily)}</div>
+  <button class="btn btn-d btn-sm" data-os-remove="${i}">✕</button></div>`}).join(''):'<div class="clean-empty">Nenhum equipamento adicionado.</div>';
  document.querySelectorAll('[data-os-qty]').forEach(el=>el.oninput=()=>{state.osItems[Number(el.dataset.osQty)].quantity=Math.max(1,Number(el.value||1));calcOS()});
  document.querySelectorAll('[data-os-remove]').forEach(el=>el.onclick=()=>{state.osItems.splice(Number(el.dataset.osRemove),1);renderOSItems();calcOS()});
- calcOS();
+}
+function addManualItem(){state.manualItems.push({description:'',quantity:1,unit_value:0,discountable:true});renderManualItems()}
+function renderManualItems(){
+ $('os-manual-items').innerHTML=state.manualItems.length?state.manualItems.map((it,i)=>`<div class="manual-row">
+  <input placeholder="Frete, técnico, cabo..." value="${esc(it.description)}" data-man-desc="${i}">
+  <input type="number" min="1" value="${it.quantity}" data-man-qty="${i}">
+  <input type="number" step="0.01" min="0" value="${it.unit_value}" data-man-value="${i}">
+  <select data-man-disc="${i}"><option value="true" ${it.discountable?'selected':''}>Com desconto</option><option value="false" ${!it.discountable?'selected':''}>Sem desconto</option></select>
+  <button class="btn btn-d btn-sm" data-man-remove="${i}">✕</button></div>`).join(''):'<div class="clean-empty">Nenhum item manual.</div>';
+ document.querySelectorAll('[data-man-desc]').forEach(el=>el.oninput=()=>{state.manualItems[Number(el.dataset.manDesc)].description=el.value});
+ document.querySelectorAll('[data-man-qty]').forEach(el=>el.oninput=()=>{state.manualItems[Number(el.dataset.manQty)].quantity=Math.max(1,Number(el.value||1));calcOS()});
+ document.querySelectorAll('[data-man-value]').forEach(el=>el.oninput=()=>{state.manualItems[Number(el.dataset.manValue)].unit_value=Math.max(0,Number(el.value||0));calcOS()});
+ document.querySelectorAll('[data-man-disc]').forEach(el=>el.onchange=()=>{state.manualItems[Number(el.dataset.manDisc)].discountable=el.value==='true';calcOS()});
+ document.querySelectorAll('[data-man-remove]').forEach(el=>el.onclick=()=>{state.manualItems.splice(Number(el.dataset.manRemove),1);renderManualItems();calcOS()});
 }
 function osDays(){const a=$('os-start').value,b=$('os-end').value;if(!a||!b)return 1;return Math.max(1,Math.floor((new Date(b)-new Date(a))/86400000)+1)}
 function calcOS(){
- const days=osDays(),sub=state.osItems.reduce((t,it)=>t+Number(it.daily||0)*Number(it.quantity||1)*days,0),disc=Math.min(100,Math.max(0,Number($('os-discount').value||0))),total=sub*(1-disc/100);
- $('os-subtotal').textContent=money(sub);$('os-total').textContent=money(total);return {days,sub,total,disc};
+ const days=osDays();
+ const equipSub=state.osItems.reduce((t,it)=>t+Number(it.daily||0)*Number(it.quantity||1)*days,0);
+ const manualDisc=state.manualItems.filter(x=>x.discountable).reduce((t,it)=>t+Number(it.unit_value||0)*Number(it.quantity||1),0);
+ const manualNoDisc=state.manualItems.filter(x=>!x.discountable).reduce((t,it)=>t+Number(it.unit_value||0)*Number(it.quantity||1),0);
+ const discount=Math.min(100,Math.max(0,Number($('os-discount').value||0)));
+ const discountValue=(equipSub+manualDisc)*(discount/100),subtotal=equipSub+manualDisc+manualNoDisc,total=subtotal-discountValue;
+ $('os-subtotal').textContent=money(subtotal);$('os-total').textContent=money(total);
+ return {days,equipSub,manualDisc,manualNoDisc,subtotal,total,discount,discountValue};
 }
 async function checkConflicts(items=state.osItems,start=$('os-start').value,end=$('os-end').value){
  if(!start||!end)throw new Error('Informe o período.');
@@ -696,26 +791,74 @@ async function checkConflicts(items=state.osItems,start=$('os-start').value,end=
 }
 async function saveOS(){
  try{
-  const clientName=$('os-client-name').value.trim();
-  const companyName=$('os-company-name').value.trim();
-  const contactName=$('os-contact-name').value.trim();
+  resolveClientCompanyFromTyped();
+  const clientName=$('os-client-name').value.trim(),companyName=$('os-company-name').value.trim(),contactName=$('os-contact-name').value.trim();
   const client=state.clients.find(c=>(c.nome||'').trim().toLowerCase()===clientName.toLowerCase());
   const company=state.companies.find(c=>(c.nome||'').trim().toLowerCase()===companyName.toLowerCase());
-  const contact=state.contacts.find(c=>(c.nome||'').trim().toLowerCase()===contactName.toLowerCase() && (!company || Number(c.empresa_id)===Number(company.id)));
+  const contact=state.contacts.find(c=>(c.nome||'').trim().toLowerCase()===contactName.toLowerCase()&&(!company||Number(c.empresa_id)===Number(company.id)));
   const start=$('os-start').value,end=$('os-end').value;
   if(!clientName&&!companyName)throw new Error('Digite o cliente ou a empresa.');
-  if(!start||!end||!state.osItems.length)throw new Error('Preencha período e equipamentos.');
-  const conflicts=await checkConflicts();
-  if(conflicts.length&&$('os-status').value!=='pre_reserva'){$('os-status').value='pre_reserva';$('os-conflicts').innerHTML='<div class="notice warn">Existem conflitos. A OS foi alterada para pré-reserva.</div>'}
-  const {days,sub,total,disc}=calcOS();
-  const num=Number(await api('rpc/bd_proximo_numero_ordem',{method:'POST',body:'{}'}));
-  const inserted=await api('bd_ordens',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([{numero:num,cliente_id:client?client.id:null,cliente_nome:clientName||contactName||companyName,cliente_digitado:clientName,empresa_id:company?company.id:null,empresa_nome:companyName,contato_id:contact?contact.id:null,contato_nome:contactName,atendente:$('os-attendant').value.trim(),job:$('os-job').value.trim(),data_inicio:start,data_fim:end,status:$('os-status').value,desconto:disc,subtotal:sub,total,pagamento:$('os-payment').value,observacao:$('os-notes').value.trim(),alerta_disponibilidade:conflicts.length?JSON.stringify(conflicts):''}])});
-  const orderId=inserted[0].id;
-  const items=state.osItems.map(it=>{const e=state.equipments.find(x=>x.id===Number(it.equipment_id));return {ordem_id:orderId,equipamento_id:e.id,equip_key:e.equip_key,equipamento_nome:e.nome,quantidade:Number(it.quantity),diaria:Number(e.diaria||0),dias:days,subtotal:Number(e.diaria||0)*Number(it.quantity)*days}});
-  await api('bd_ordem_itens',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(items)});
-  closeModal('modal-os');await Promise.all([loadOrders(),loadSummary()]);toast('OS #'+num+' criada');
+  if(!start||!end)throw new Error('Informe o período.');
+  if(!state.osItems.length&&!state.manualItems.length)throw new Error('Adicione pelo menos um item.');
+
+  const conflicts=state.osItems.length?await checkConflicts():[];
+  if(conflicts.length&&$('os-status').value!=='pre_reserva'){$('os-status').value='pre_reserva';$('os-conflicts').innerHTML='<div class="notice warn">Existem conflitos. A OS foi salva como pré-reserva.</div>'}
+  const v=calcOS(),type=$('os-type').value,payment=type==='emprestimo'?'na':'em_aberto',editId=Number($('os-edit-id').value||0);
+  let orderId,number;
+  const body={cliente_id:client?client.id:null,cliente_nome:clientName||contactName||companyName,cliente_digitado:clientName,empresa_id:company?company.id:null,empresa_nome:companyName,contato_id:contact?contact.id:null,contato_nome:contactName,atendente:$('os-attendant').value.trim(),job:$('os-job').value.trim(),data_inicio:start,data_fim:end,status:$('os-status').value||'pre_reserva',desconto:v.discount,subtotal:v.subtotal,total:type==='emprestimo'?0:v.total,pagamento:payment,observacao:$('os-notes').value.trim(),alerta_disponibilidade:conflicts.length?JSON.stringify(conflicts):'',updated_at:new Date().toISOString()};
+  if(editId){
+    await api('bd_ordens?id=eq.'+editId,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(body)});
+    orderId=editId;number=state.orders.find(o=>o.id===editId)?.numero;
+    await api('bd_ordem_itens?ordem_id=eq.'+editId,{method:'DELETE',headers:{Prefer:'return=minimal'}});
+    await api('bd_ordem_itens_manuais?ordem_id=eq.'+editId,{method:'DELETE',headers:{Prefer:'return=minimal'}});
+  }else{
+    number=Number(await api('rpc/bd_proximo_numero_ordem',{method:'POST',body:'{}'}));
+    const inserted=await api('bd_ordens',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([{...body,numero:number,created_at:new Date().toISOString()}])});
+    orderId=inserted[0].id;
+  }
+  if(state.osItems.length){
+    const items=state.osItems.map(it=>{const e=state.equipments.find(x=>x.id===Number(it.equipment_id));return {ordem_id:orderId,equipamento_id:e.id,equip_key:e.equip_key,equipamento_nome:e.nome,quantidade:Number(it.quantity),diaria:Number(e.diaria||0),dias:v.days,subtotal:Number(e.diaria||0)*Number(it.quantity)*v.days}});
+    await api('bd_ordem_itens',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(items)});
+  }
+  const manuals=state.manualItems.filter(x=>x.description.trim()).map(x=>({ordem_id:orderId,descricao:x.description.trim(),quantidade:Number(x.quantity||1),valor_unitario:Number(x.unit_value||0),aplica_desconto:!!x.discountable,subtotal:Number(x.unit_value||0)*Number(x.quantity||1)}));
+  if(manuals.length)await api('bd_ordem_itens_manuais',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(manuals)});
+  closeModal('modal-os');await Promise.all([loadOrders(),loadSummary()]);toast('OS #'+number+' salva');await openOrder(orderId);
  }catch(e){toast(e.message,'err')}
 }
+
+async function openOrder(id){
+ try{
+  const order=(await api('bd_ordens?id=eq.'+id+'&select=*'))?.[0];if(!order)throw new Error('OS não encontrada.');
+  const items=await api('bd_ordem_itens?ordem_id=eq.'+id+'&select=*&order=id.asc');
+  let manuals=[];try{manuals=await api('bd_ordem_itens_manuais?ordem_id=eq.'+id+'&select=*&order=id.asc')}catch(e){}
+  state.currentOrder=order;state.currentOrderItems=items||[];state.currentManualItems=manuals||[];renderOrderDetail();showPage('os-detalhe');
+ }catch(e){toast(e.message,'err')}
+}
+function renderOrderDetail(){
+ const o=state.currentOrder,items=state.currentOrderItems,manuals=state.currentManualItems;
+ $('detail-os-title').textContent='OS '+o.numero+'/'+new Date(o.data_inicio+'T00:00:00').getFullYear();
+ const rows=[...items.map(i=>`<tr><td>${i.quantidade}</td><td>${esc(i.equipamento_nome)}</td><td>${money(i.diaria)}</td><td>${i.dias}</td><td>${money(i.subtotal)}</td></tr>`),...manuals.map(i=>`<tr><td>${i.quantidade}</td><td>${esc(i.descricao)}${i.aplica_desconto?'':' <span class="muted">(sem desconto)</span>'}</td><td>${money(i.valor_unitario)}</td><td>-</td><td>${money(i.subtotal)}</td></tr>`)].join('');
+ $('order-detail-content').innerHTML=`<div id="print-area" class="os-doc"><div style="display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:14px"><div><h2>BLIP PRODUTORA AUDIOVISUAL LTDA</h2><div class="muted">Avenida Embaixador Abelardo Bueno, nº 1, Bloco A — Barra da Tijuca/RJ</div></div><div style="text-align:right"><h1>OS ${o.numero}</h1><div>${dateBR(o.data_inicio)} a ${dateBR(o.data_fim)}</div></div></div><div class="summary-box"><div class="card"><div class="info-label">Cliente / empresa</div><b>${esc(o.empresa_nome||o.cliente_nome||'')}</b></div><div class="card"><div class="info-label">Contato</div><b>${esc(o.contato_nome||o.cliente_nome||'')}</b></div><div class="card"><div class="info-label">Status</div><b>${esc(o.status)}</b></div><div class="card"><div class="info-label">Job</div><b>${esc(o.job||'')}</b></div></div><table><thead><tr><th>Qtd</th><th>Item</th><th>Valor unit.</th><th>Diárias</th><th>Subtotal</th></tr></thead><tbody>${rows||'<tr><td colspan="5">Sem itens</td></tr>'}</tbody></table><div style="margin-top:16px;text-align:right"><div>Subtotal: <b>${money(o.subtotal)}</b></div><div>Desconto: <b>${Number(o.desconto||0)}%</b></div><div style="font-size:18px;margin-top:5px">TOTAL: <b>${money(o.total)}</b></div></div><div style="margin-top:18px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;line-height:1.6">Reserva dos equipamentos somente após o aceite da OS. Seguro dos equipamentos não incluso, salvo quando expressamente indicado.</div></div>`;
+}
+async function editCurrentOrder(){
+ const o=state.currentOrder;if(!o)return;
+ $('os-edit-id').value=o.id;$('os-modal-title').textContent='Editar OS #'+o.numero;$('os-client-name').value=o.cliente_digitado||(!o.empresa_nome?o.cliente_nome:'')||'';$('os-company-name').value=o.empresa_nome||'';$('os-contact-name').value=o.contato_nome||'';$('os-start').value=o.data_inicio||'';$('os-end').value=o.data_fim||'';$('os-job').value=o.job||'';$('os-attendant').value=o.atendente||'Admin';$('os-status').value=o.status||'pre_reserva';$('os-discount').value=o.desconto||0;$('os-payment').value=o.pagamento||'em_aberto';$('os-type').value=o.pagamento==='na'?'emprestimo':'locacao';$('os-notes').value=o.observacao||'';
+ state.osItems=state.currentOrderItems.map(i=>({equipment_id:i.equipamento_id,quantity:i.quantidade,daily:i.diaria}));
+ state.manualItems=state.currentManualItems.map(i=>({description:i.descricao,quantity:i.quantidade,unit_value:i.valor_unitario,discountable:i.aplica_desconto}));
+ renderOSItems();renderManualItems();calcOS();fillCompanyContactLists();openModal('modal-os');
+}
+async function cancelCurrentOrder(){
+ if(!state.currentOrder||!confirm('Cancelar esta OS?'))return;
+ await api('bd_ordens?id=eq.'+state.currentOrder.id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'cancelada',updated_at:new Date().toISOString()})});
+ await Promise.all([loadOrders(),loadSummary()]);toast('OS cancelada');showPage('ordens');
+}
+function downloadHtml(filename,content){const blob=new Blob([content],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+function buildContractHtml(){
+ const o=state.currentOrder,items=[...state.currentOrderItems.map(i=>`${i.quantidade} ${i.equipamento_nome}`),...state.currentManualItems.map(i=>`${i.quantidade} ${i.descricao}`)].join('<br>');
+ return `<div id="contract-print-area" class="os-doc"><h1 style="text-align:center">CONTRATO DE LOCAÇÃO DE EQUIPAMENTOS</h1><p>LOCADORA: BLIP PRODUTORA AUDIOVISUAL LTDA, CNPJ 53.049.041/0001-39, com sede na Avenida Embaixador Abelardo Bueno, nº 1, Bloco A, Barra da Tijuca, Rio de Janeiro/RJ.</p><p style="margin-top:12px">LOCATÁRIO: <b>${esc(o.empresa_nome||o.cliente_nome||'')}</b>${o.contato_nome?', representado por '+esc(o.contato_nome):''}.</p><p style="margin-top:12px">OBJETO: locação dos equipamentos descritos abaixo, no período de <b>${dateBR(o.data_inicio)}</b> a <b>${dateBR(o.data_fim)}</b>.</p><div style="margin:14px 0;padding:12px;border:1px solid #ddd">${items||'Sem itens'}</div><p>O locatário se responsabiliza por danos, perdas, furtos, roubos e atrasos na devolução, conforme a Ordem de Serviço e as condições de locação da BLIP.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:60px"><div style="border-top:1px solid #111;text-align:center;padding-top:6px">BLIP PRODUTORA AUDIOVISUAL LTDA</div><div style="border-top:1px solid #111;text-align:center;padding-top:6px">${esc(o.empresa_nome||o.cliente_nome||'')}</div></div></div>`;
+}
+function viewContract(){$('contract-content').innerHTML=buildContractHtml();openModal('modal-contract')}
+
 async function checkAvailability(){
  try{const id=Number($('disp-equip').value),start=$('disp-start').value,end=$('disp-end').value;if(!id||!start||!end)throw new Error('Preencha os campos.');const eq=state.equipments.find(e=>e.id===id),rows=await checkConflicts([{equipment_id:id,quantity:1}],start,end);$('disp-result').innerHTML=rows.length?'<div class="notice warn">⚠️ Conflitos:<br>'+rows.map(r=>'OS #'+r.numero+' — '+esc(r.status)+' — qtd '+r.quantidade).join('<br>')+'</div>':'<div class="notice ok">🟢 '+esc(eq?.nome||'Equipamento')+' sem conflito no período.</div>'}catch(e){toast(e.message,'err')}
 }
@@ -731,14 +874,22 @@ function bind(){
  document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id)}));
  $('theme-toggle').onclick=()=>{document.body.classList.toggle('light');const light=document.body.classList.contains('light');localStorage.setItem('blip_theme',light?'light':'dark');$('theme-sw').classList.toggle('on',light);$('theme-label').textContent=light?'Modo claro':'Modo escuro'};
  $('btn-refresh').onclick=loadAll;$('btn-refresh-equips').onclick=loadEquipments;$('btn-logs').onclick=loadLogs;
- $('btn-new-os').onclick=openNewOS;$('btn-new-os-2').onclick=openNewOS;$('btn-add-os-item').onclick=()=>addOSItem();$('btn-save-os').onclick=saveOS;
+ $('btn-new-os').onclick=openNewOS;$('btn-new-os-2').onclick=openNewOS;$('btn-add-os-item').onclick=openEquipmentPicker;$('btn-add-manual-item').onclick=addManualItem;$('btn-save-os').onclick=saveOS;
  ['os-start','os-end','os-discount'].forEach(id=>$(id).addEventListener('input',calcOS));
  $('btn-check-disp').onclick=checkAvailability;
- $('os-company-name').addEventListener('input',fillCompanyContactLists);
+ $('os-company-name').addEventListener('input',fillCompanyContactLists);$('os-client-name').addEventListener('change',resolveClientCompanyFromTyped);$('equip-picker-search').addEventListener('input',renderEquipmentPicker);
  $('equip-search').oninput=renderEquipments;$('client-search').oninput=renderClients;
  $('client-tabs').querySelectorAll('.stab').forEach(b=>b.onclick=()=>{state.clientFilter=b.dataset.status;document.querySelectorAll('#client-tabs .stab').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderClients()});
  $('os-tabs').querySelectorAll('.stab').forEach(b=>b.onclick=()=>{state.orderFilter=b.dataset.status;document.querySelectorAll('#os-tabs .stab').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderOrders()});
  $('btn-new-client').onclick=()=>openModal('modal-client-new');$('btn-save-client').onclick=saveManualClient;$('btn-approve-client').onclick=()=>setClientStatus('aprovado');$('btn-reject-client').onclick=()=>setClientStatus('recusado');
+ $('btn-back-orders').onclick=()=>showPage('ordens');
+ $('btn-edit-order').onclick=editCurrentOrder;
+ $('btn-print-order').onclick=()=>window.print();
+ $('btn-download-order').onclick=()=>downloadHtml('OS-'+(state.currentOrder?.numero||'')+'.html','<!doctype html><html><head><meta charset="utf-8"><title>OS</title></head><body>'+($('print-area')?.outerHTML||'')+'</body></html>');
+ $('btn-view-contract').onclick=viewContract;
+ $('btn-cancel-order').onclick=cancelCurrentOrder;
+ $('btn-print-contract').onclick=()=>window.print();
+ $('btn-download-contract').onclick=()=>downloadHtml('Contrato-OS-'+(state.currentOrder?.numero||'')+'.html','<!doctype html><html><head><meta charset="utf-8"><title>Contrato</title></head><body>'+buildContractHtml()+'</body></html>');
  $('btn-sync-clients').onclick=()=>{window.open(CLIENT_SCRIPT_URL+'?acao=syncClientes&t='+Date.now(),'_blank');setTimeout(()=>Promise.all([loadClients(),loadSummary()]),4000)};
 }
 document.addEventListener('DOMContentLoaded',()=>{
