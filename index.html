@@ -292,7 +292,7 @@ tr:hover td{background:var(--bg3)}
       <div class="ni active" onclick="go('dashboard')"><span class="icon">◉</span>Dashboard</div>
       <div class="ni" onclick="go('os')"><span class="icon">📋</span>Ordens de Serviço<span class="nbadge" id="badge-pgto" style="display:none">0</span></div>
       <div class="ni" onclick="go('disponibilidade')"><span class="icon">🔍</span>Disponibilidade</div>
-      <div class="ni" onclick="go('clientes')"><span class="icon">👤</span>Clientes</div>
+      <div class="ni" onclick="go('clientes')"><span class="icon">👤</span>Clientes <span id="cli-new-badge" class="nbadge" style="display:none">0</span></div>
       <div class="ni" onclick="go('equipamentos')"><span class="icon">🎥</span>Equipamentos</div>
       <div class="ni" onclick="go('checklist')"><span class="icon">✅</span>Checklist</div>
       <div class="ni" onclick="go('orcamento')"><span class="icon">💬</span>Orçamento rápido</div>
@@ -413,11 +413,13 @@ tr:hover td{background:var(--bg3)}
           <option value="pendente">Pendente</option>
           <option value="analise">Em analise</option>
           <option value="aprovado">Aprovado</option>
+          <option value="negado">Negado</option>
           <option value="confianca">De confianca</option>
           <option value="bloqueado">Bloqueado</option>
         </select>
         <button class="btn btn-g btn-sm" onclick="limparFiltrosCli()">Limpar</button>
       </div>
+      <div id="cli-sync-info" style="font-size:12px;color:var(--text2);margin-bottom:10px" aria-live="polite"></div>
       <div class="card"><table><thead><tr><th>Nome</th><th>CPF / CNPJ</th><th>Telefone</th><th>Status</th><th>OS</th><th></th></tr></thead>
       <tbody id="cli-tbody"></tbody></table></div>
     </div>
@@ -1361,6 +1363,7 @@ async function init(){
       sb('equipamentos','GET',null,'?order=nome')
     ]);
     cache.clientes=cs||[];
+    blipInicializarNotificacoes();
     const itensMap={};
     (osItens||[]).forEach(i=>{if(!itensMap[i.os_id])itensMap[i.os_id]=[];itensMap[i.os_id].push(i);});
     cache.os=(os||[]).map(o=>({...o,itens:itensMap[o.id]||[],itens_avulsos:o.itens_avulsos||[]}));
@@ -2096,6 +2099,7 @@ async function autoRefresh(){
     cache.os=(os||[]).map(o=>({...o,itens:itensMap[o.id]||[],itens_avulsos:o.itens_avulsos||[]}));
     const cliNovos=(clientes||[]).filter(c=>!cache.clientes.find(x=>x.id===c.id));
     cache.clientes=clientes||[];
+    blipRegistrarNovos(cliNovos);
     if(eqs && eqs.length){cache.equipamentos=normalizeEquipList(eqs);renderEqs(document.getElementById('eq-search')?.value||'');atualizarFiltroMarca();}
     // Notificar novos cadastros
     if(cliNovos.length>0){
@@ -2105,15 +2109,16 @@ async function autoRefresh(){
         }
       });
     }
-    renderDashboard();renderOS();renderClientes('');
-  }catch(e){}
+    renderDashboard();renderOS();renderClientes(document.getElementById('cli-search-input')?.value||'');
+    blipMostrarUltimaSync();
+  }catch(e){console.warn('Falha na atualização automática:',e);}
 }
 
 function notificacao(msg,onClick){
   // Criar notificação no canto
   const div=document.createElement('div');
   div.style.cssText='position:fixed;top:20px;right:24px;background:var(--bg2);border:1px solid var(--success);border-radius:10px;padding:14px 18px;font-size:13px;z-index:999;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:slideIn .3s ease;max-width:300px';
-  div.innerHTML=`<div style="font-weight:600;color:var(--success);margin-bottom:4px">🔔 Novo cadastro</div><div style="color:var(--text2);font-size:12px">${msg}</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Clique para ver</div>`;
+  div.innerHTML=`<div style="font-weight:600;color:var(--success);margin-bottom:4px">🔔 Novo cadastro</div><div style="color:var(--text2);font-size:12px">${blipEscaparHtml(msg)}</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Clique para ver</div>`;
   div.onclick=()=>{document.body.removeChild(div);if(onClick)onClick();};
   document.body.appendChild(div);
   setTimeout(()=>{if(document.body.contains(div))document.body.removeChild(div);},8000);
@@ -2126,6 +2131,37 @@ function setSyncStatus(s){
   else{dot.style.background='var(--warning)';txt.textContent='Conectando...';}
 }
 
+// ===== BLIP: avisos de novos cadastros (por navegador) =====
+const BLIP_VISTOS_KEY='blip_clientes_vistos_v1';
+const BLIP_BOOT_KEY='blip_clientes_inicializado_v1';
+function blipEscaparHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function blipIdsVistos(){try{return new Set(JSON.parse(localStorage.getItem(BLIP_VISTOS_KEY)||'[]').map(String));}catch(e){return new Set();}}
+function blipSalvarVistos(ids){localStorage.setItem(BLIP_VISTOS_KEY,JSON.stringify([...ids].slice(-5000)));}
+function blipInicializarNotificacoes(){
+  if(!localStorage.getItem(BLIP_BOOT_KEY)){
+    blipSalvarVistos(new Set(cache.clientes.map(c=>String(c.id))));
+    localStorage.setItem(BLIP_BOOT_KEY,'1');
+  }
+  blipAtualizarContador();blipMostrarUltimaSync();
+}
+function blipRegistrarNovos(novos){
+  if(!localStorage.getItem(BLIP_BOOT_KEY)){blipInicializarNotificacoes();return;}
+  blipAtualizarContador();
+}
+function blipAtualizarContador(){
+  const badge=document.getElementById('cli-new-badge');if(!badge)return;
+  const vistos=blipIdsVistos();
+  const n=cache.clientes.filter(c=>!vistos.has(String(c.id))).length;
+  badge.textContent=n>99?'99+':String(n);badge.style.display=n?'inline-flex':'none';
+}
+function blipMarcarVisualizados(){
+  const vistos=blipIdsVistos();cache.clientes.forEach(c=>vistos.add(String(c.id)));
+  blipSalvarVistos(vistos);blipAtualizarContador();
+}
+function blipMostrarUltimaSync(){
+  const el=document.getElementById('cli-sync-info');if(el)el.textContent='Atualização automática a cada 30 segundos • Última conferência: '+new Date().toLocaleTimeString('pt-BR');
+}
+
 // ===== NAV =====
 function go(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -2136,7 +2172,7 @@ function go(page){
   if(niEls[idx[page]])niEls[idx[page]].classList.add('active');
   if(page==='dashboard')renderDashboard();
   if(page==='os')renderOS();
-  if(page==='clientes')renderClientes('');
+  if(page==='clientes'){blipMarcarVisualizados();renderClientes(document.getElementById('cli-search-input')?.value||'');}
   if(page==='equipamentos')renderEqs('');
   if(page==='orcamento')initOrcamento();
   if(page==='usuarios')renderUsuarios();
@@ -3143,13 +3179,14 @@ function limparFiltrosCli(){
 }
 
 function renderClientes(q=''){
+  blipAtualizarContador();
   const filStatus=document.getElementById('cli-fil-status')?.value||'';
   let list=q?cache.clientes.filter(c=>c.nome.toLowerCase().includes(q.toLowerCase())||c.doc?.includes(q)):cache.clientes;
   if(filStatus)list=list.filter(c=>(c.status_cadastro||'aprovado')===filStatus);
   document.getElementById('cli-tbody').innerHTML=list.length?list.map(c=>{
     const osCount=cache.os.filter(o=>o.cliente_id===c.id).length;
-    const statusMap2={pendente:'🔴 Pendente',analise:'🟡 Em análise',aprovado:'🟢 Aprovado',confianca:'⭐ Confiança',bloqueado:'🔒 Bloqueado'};
-    const statusCls2={pendente:'cs-pendente',analise:'cs-analise',aprovado:'cs-aprovado',confianca:'cs-confianca',bloqueado:'cs-bloqueado'};
+    const statusMap2={negado:'🔴 Negado',pendente:'🔴 Pendente',analise:'🟡 Em análise',aprovado:'🟢 Aprovado',confianca:'⭐ Confiança',bloqueado:'🔒 Bloqueado'};
+    const statusCls2={negado:'cs-pendente',pendente:'cs-pendente',analise:'cs-analise',aprovado:'cs-aprovado',confianca:'cs-confianca',bloqueado:'cs-bloqueado'};
     const sc2=c.status_cadastro||'aprovado';
     return`<tr style="${['pendente','analise'].includes(sc2)?'background:rgba(74,255,140,.02)':''}">
       <td><b style="cursor:pointer" onclick="verFicha(${c.id})">${c.nome}</b>${c.de_confianca?'<span style="font-size:10px;color:var(--accent);margin-left:6px">⭐</span>':''}${c.empresa_id?`<span class="empresa-badge">🏢 ${cli(c.empresa_id)?.nome||'?'}</span>`:''}</td>
