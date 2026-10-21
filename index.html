@@ -3254,21 +3254,45 @@ async function delCli(id){
   }catch(e){toast('Erro: '+e.message,'err');}
 }
 
+function blipCadastroForms(c){
+  if(!c)return null;
+  const digits=v=>String(v||'').replace(/\D/g,'');
+  const doc=digits(c.doc);
+  // Documento normalizado tem prioridade. Nome só é aceito se houver correspondência única.
+  if(doc){const matches=CADASTROS_FORMS.filter(f=>digits(f.doc)===doc);if(matches.length===1)return matches[0];}
+  const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
+  const matches=CADASTROS_FORMS.filter(f=>norm(f.nome)===norm(c.nome));
+  return matches.length===1?matches[0]:null;
+}
+function blipUrlArquivo(url){
+  if(!url)return '';
+  const u=String(url).trim();
+  try{const parsed=new URL(u);return ['https:','http:'].includes(parsed.protocol)?parsed.href:'';}catch{return '';}
+}
+function blipImagemArquivo(label,url,thumb){
+  const link=blipUrlArquivo(url),preview=blipUrlArquivo(thumb);
+  if(!link&&!preview)return '';
+  const safeLabel=blipEscHtml(label);
+  return `<div style="margin-bottom:14px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">${safeLabel}</div>${preview?`<a href="${blipEscHtml(link||preview)}" target="_blank" rel="noopener noreferrer"><img src="${blipEscHtml(preview)}" alt="${safeLabel}" loading="lazy" style="max-width:200px;max-height:180px;object-fit:contain;border-radius:8px;border:1px solid var(--border2)" onerror="this.style.display='none'"></a>`:''}<div style="margin-top:4px"><a href="${blipEscHtml(link||preview)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:var(--accent)">Abrir arquivo completo ↗</a></div></div>`;
+}
+function blipEscHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function verCadastroCompleto(cliId){
   const cObj=cli(cliId);if(!cObj)return;
-  const f=CADASTROS_FORMS.find(x=>x.nome.toLowerCase().trim()===cObj.nome.toLowerCase().trim()||x.doc===cObj.doc);
-  if(!f){toast('Cadastro do Forms nao encontrado','err');return;}
+  const f=blipCadastroForms(cObj)||{};
+  const campo=(label,val)=>val?`<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">${blipEscHtml(label)}</div><div style="font-size:13px">${blipEscHtml(val)}</div></div>`:'';
+  const docUrl=blipUrlArquivo(cObj.documento_url)||blipUrlArquivo(f.documento_view);
+  const comprovUrl=blipUrlArquivo(cObj.comprovante_url)||blipUrlArquivo(f.comprovante_view);
+  const documento=blipImagemArquivo('Documento oficial com foto',docUrl,f.documento_thumb);
+  const comprovante=blipImagemArquivo('Comprovante de residência',comprovUrl,f.comprovante_thumb);
   document.getElementById('cc-nome').textContent='Cadastro completo - '+cObj.nome;
-  const campo=(label,val)=>val?'<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:2px">'+label+'</div><div style="font-size:13px">'+val+'</div></div>':'';
-  const imgDoc=(label,thumb,view)=>thumb?'<div style="margin-bottom:14px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">'+label+'</div><a href="'+view+'" target="_blank"><img src="'+thumb+'" style="max-width:200px;border-radius:8px;border:1px solid var(--border2)"></a><div style="margin-top:4px"><a href="'+view+'" target="_blank" style="font-size:12px;color:var(--accent)">Abrir arquivo completo</a></div></div>':'';
   document.getElementById('cc-content').innerHTML=
-    '<div style="background:var(--bg3);border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:12px;color:var(--text3)">Cadastro em: <strong style="color:var(--text)">'+f.created_at_forms+'</strong></div>'+
-    '<div class="g2">'+campo('Nome',f.nome)+campo('CPF / CNPJ',f.doc)+campo('CPF representante',f.cpf_representante)+campo('Data nascimento',f.data_nascimento)+campo('E-mail',f.email)+campo('Telefone',f.tel)+campo('Rede social',f.rede_social)+campo('Bairro',f.bairro)+'</div>'+
-    '<div class="g2">'+campo('Endereco',f.endereco)+campo('CEP',f.cep)+'</div>'+
-    '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px"><h3 style="margin-bottom:12px">Referencias comerciais</h3><div class="g2">'+campo('Referencia 1',f.referencia1)+campo('Referencia 2',f.referencia2)+'</div></div>'+
-    '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px"><h3 style="margin-bottom:12px">Informacoes adicionais</h3><div class="g2">'+campo('Quem fez o cadastro',f.cadastrado_por)+campo('CPF cadastrante',f.cpf_cadastrante)+campo('Profissao',f.profissao)+campo('Nacionalidade',f.nacionalidade)+campo('Estado civil',f.estado_civil)+campo('Como conheceu a Blip',f.como_conheceu)+'</div></div>'+
-    (f.obs_interna?'<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px"><h3 style="margin-bottom:8px">Observacao interna</h3><p style="font-size:13px;color:var(--text2)">'+f.obs_interna+'</p></div>':'')+
-    '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px"><h3 style="margin-bottom:12px">Documentos</h3><div class="g2">'+imgDoc('Comprovante de residencia',f.comprovante_thumb,f.comprovante_view)+imgDoc('Documento oficial com foto',f.documento_thumb,f.documento_view)+'</div>'+(!f.comprovante_thumb&&!f.documento_thumb?'<p style="font-size:13px;color:var(--text3)">Nenhum documento enviado.</p>':'')+'</div>';
+    (f.created_at_forms?`<div style="background:var(--bg3);border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:12px;color:var(--text3)">Cadastro em: <strong style="color:var(--text)">${blipEscHtml(f.created_at_forms)}</strong></div>`:'')+
+    '<div class="g2">'+campo('Nome',cObj.nome)+campo('CPF / CNPJ',cObj.doc)+campo('CPF representante',cObj.cpf_representante||f.cpf_representante)+campo('Data nascimento',cObj.data_nascimento||f.data_nascimento)+campo('E-mail',cObj.email||f.email)+campo('Telefone',cObj.tel||f.tel)+campo('Rede social',cObj.rede_social||f.rede_social)+campo('Bairro',cObj.bairro||f.bairro)+'</div>'+
+    '<div class="g2">'+campo('Endereço',cObj.endereco||f.endereco)+campo('CEP',cObj.cep||f.cep)+'</div>'+
+    '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px"><h3 style="margin-bottom:12px">Referências comerciais</h3><div class="g2">'+campo('Referência 1',cObj.referencia1||f.referencia1)+campo('Referência 2',cObj.referencia2||f.referencia2)+'</div></div>'+
+    '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px"><h3 style="margin-bottom:12px">Informações adicionais</h3><div class="g2">'+campo('Quem fez o cadastro',cObj.cadastrado_por||f.cadastrado_por)+campo('CPF cadastrante',cObj.cpf_cadastrante||f.cpf_cadastrante)+campo('Profissão',cObj.profissao||f.profissao)+campo('Nacionalidade',cObj.nacionalidade||f.nacionalidade)+campo('Estado civil',cObj.estado_civil||f.estado_civil)+campo('Como conheceu a Blip',cObj.como_conheceu||f.como_conheceu)+'</div></div>'+
+    (f.obs_interna?'<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">'+campo('Observação interna',f.obs_interna)+'</div>':'')+
+    '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px"><h3 style="margin-bottom:12px">Documentos</h3><div class="g2">'+comprovante+documento+'</div>'+(!comprovante&&!documento?'<p style="font-size:13px;color:var(--text3)">Nenhum link de documento disponível neste cadastro. Confira os campos comprovante_url e documento_url no Supabase e as permissões dos arquivos no Drive.</p>':'')+'</div>';
   openM('m-cadastro-completo');
 }
 
@@ -3278,10 +3302,7 @@ function verFicha(id){
   const totalGasto=osDoCliente.filter(o=>o.pagamento==='pago'&&!['conserto','consertado','vendido','cancelado'].includes(o.status)).reduce((a,o)=>a+osTotal(o).total,0);
 
   // Buscar dados do Forms pelo nome ou doc
-  const formsData=CADASTROS_FORMS.find(f=>
-    f.nome.toLowerCase().trim()===cObj.nome.toLowerCase().trim()||
-    (f.doc&&cObj.doc&&f.doc.replace(/\D/g,'')===cObj.doc.replace(/\D/g,''))
-  );
+  const formsData=blipCadastroForms(cObj);
 
   const statusMap={pendente:'🔴 Pendente',analise:'🟡 Em análise',aprovado:'🟢 Aprovado',confianca:'⭐ De confiança',bloqueado:'🔒 Bloqueado'};
   const statusCls={pendente:'cs-pendente',analise:'cs-analise',aprovado:'cs-aprovado',confianca:'cs-confianca',bloqueado:'cs-bloqueado'};
@@ -3303,7 +3324,7 @@ function verFicha(id){
         ${cObj.de_confianca?'<span style="font-size:12px;color:var(--accent)">⭐ De confiança</span>':''}
       </div>
       <div style="display:flex;gap:8px">
-        ${formsData?`<button class="btn btn-g btn-sm" onclick="verCadastroCompleto(${id})">📋 Cadastro completo</button>`:''}
+        <button class="btn btn-g btn-sm" onclick="verCadastroCompleto(${id})">📋 Cadastro completo / Documentos</button>
         <button class="btn btn-g btn-sm" onclick="abrirVincularEmpresa(${id})">🏢 Vincular empresa</button>
         <button class="btn btn-g btn-sm" onclick="closeM('m-ficha-cli');editarCliente(${id})">✏️ Editar</button>
       </div>
