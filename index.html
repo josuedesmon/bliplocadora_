@@ -3270,10 +3270,19 @@ function blipUrlArquivo(url){
   try{const parsed=new URL(u);return ['https:','http:'].includes(parsed.protocol)?parsed.href:'';}catch{return '';}
 }
 function blipImagemArquivo(label,url,thumb){
-  const link=blipUrlArquivo(url),preview=blipUrlArquivo(thumb);
-  if(!link&&!preview)return '';
+  const link=blipUrlArquivo(url),historico=blipUrlArquivo(thumb);
+  if(!link&&!historico)return '';
   const safeLabel=blipEscHtml(label);
-  return `<div style="margin-bottom:14px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">${safeLabel}</div>${preview?`<a href="${blipEscHtml(link||preview)}" target="_blank" rel="noopener noreferrer"><img src="${blipEscHtml(preview)}" alt="${safeLabel}" loading="lazy" style="max-width:200px;max-height:180px;object-fit:contain;border-radius:8px;border:1px solid var(--border2)" onerror="this.style.display='none'"></a>`:''}<div style="margin-top:4px"><a href="${blipEscHtml(link||preview)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:var(--accent)">Abrir arquivo completo ↗</a></div></div>`;
+  // Google Drive: usar miniatura do próprio arquivo quando não houver uma histórica.
+  // O Drive pode bloquear miniaturas privadas; nesse caso manter link de abertura.
+  let preview=historico;
+  if(!preview&&link){
+    const m=link.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/)||link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if(m)preview='https://drive.google.com/thumbnail?id='+encodeURIComponent(m[1])+'&sz=w600';
+  }
+  const href=blipEscHtml(link||historico);
+  const img=preview?`<a href="${href}" target="_blank" rel="noopener noreferrer"><img src="${blipEscHtml(preview)}" alt="${safeLabel}" loading="lazy" style="max-width:100%;width:auto;max-height:230px;object-fit:contain;border-radius:8px;border:1px solid var(--border2)" onerror="this.closest('a').style.display='none'"></a>`:'';
+  return `<div style="margin-bottom:14px;min-width:0"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">${safeLabel}</div>${img}<div style="margin-top:8px"><a href="${href}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:var(--accent)">Abrir documento no Google Drive ↗</a></div></div>`;
 }
 function blipEscHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function verCadastroCompleto(cliId){
@@ -3293,6 +3302,8 @@ function verCadastroCompleto(cliId){
     '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px"><h3 style="margin-bottom:12px">Informações adicionais</h3><div class="g2">'+campo('Quem fez o cadastro',cObj.cadastrado_por||f.cadastrado_por)+campo('CPF cadastrante',cObj.cpf_cadastrante||f.cpf_cadastrante)+campo('Profissão',cObj.profissao||f.profissao)+campo('Nacionalidade',cObj.nacionalidade||f.nacionalidade)+campo('Estado civil',cObj.estado_civil||f.estado_civil)+campo('Como conheceu a Blip',cObj.como_conheceu||f.como_conheceu)+'</div></div>'+
     (f.obs_interna?'<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">'+campo('Observação interna',f.obs_interna)+'</div>':'')+
     '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px"><h3 style="margin-bottom:12px">Documentos</h3><div class="g2">'+comprovante+documento+'</div>'+(!comprovante&&!documento?'<p style="font-size:13px;color:var(--text3)">Nenhum link de documento disponível neste cadastro. Confira os campos comprovante_url e documento_url no Supabase e as permissões dos arquivos no Drive.</p>':'')+'</div>';
+  // Ao abrir o cadastro completo, ocultar a ficha para evitar modais sobrepostos.
+  closeM('m-ficha-cli');
   openM('m-cadastro-completo');
 }
 
