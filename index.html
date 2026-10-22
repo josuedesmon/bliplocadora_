@@ -275,7 +275,7 @@ tr:hover td{background:var(--bg3)}
     </div>
     <h2 style="margin-bottom:6px">Bem-vindo</h2>
     <p style="font-size:13px;color:var(--text2);margin-bottom:24px">Entre com suas credenciais</p>
-    <div class="fg" style="text-align:left"><label>Usuário</label><input type="text" id="login-user" placeholder="Seu nome..."></div>
+    <div class="fg" style="text-align:left"><label>Usuário ou e-mail Supabase Auth</label><input type="text" id="login-user" placeholder="Nome antigo ou e-mail Auth..."></div>
     <div class="fg" style="text-align:left;margin-top:12px"><label>Senha</label><input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div id="login-err" style="color:var(--danger);font-size:12px;margin:10px 0;display:none">Usuário ou senha incorretos</div>
     <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:16px" onclick="doLogin()">Entrar</button>
@@ -319,8 +319,8 @@ tr:hover td{background:var(--bg3)}
         <span id="sync-txt">Conectando...</span>
       </div>
       <div id="app-version-badge" class="version-badge-admin">
-        <strong>Dashboard V13</strong><br>
-        OS 2025/2026 • consulta do histórico e sincronização
+        <strong>Dashboard V14</strong><br>
+        OS 2025/2026 • acesso Auth protegido
       </div>
     </div>
   </div>
@@ -1178,12 +1178,38 @@ const USUARIOS = [
 ];
 let currentUser = null;
 
+// V14: sessão Auth apenas em memória (sem persistir tokens no navegador).
+let blipAuthSession=null;
+async function blipAuthLogin(email,password){
+  const res=await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+  const data=await res.json();
+  if(!res.ok||!data.access_token)throw new Error(data.msg||data.error_description||data.message||'Falha no login Auth');
+  blipAuthSession=data;return data;
+}
+async function blipAuthToken(){
+  if(!blipAuthSession?.access_token)return null;
+  if(Date.now()<(blipAuthSession._expiresAt||0)-60000)return blipAuthSession.access_token;
+  const res=await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:blipAuthSession.refresh_token})});
+  if(!res.ok){blipAuthSession=null;throw new Error('Sessão Auth expirada. Saia e entre novamente com seu e-mail.');}
+  const data=await res.json();blipAuthSession={...data,_expiresAt:Date.now()+(data.expires_in||3600)*1000};return data.access_token;
+}
 async function doLogin(){
   const nome=document.getElementById('login-user').value.trim();
   const senha=document.getElementById('login-pass').value;
   if(!nome||!senha){document.getElementById('login-err').style.display='block';return;}
-  // Tentar Supabase primeiro, depois fallback local
+  // Contas Auth usam e-mail; usuários antigos permanecem para compatibilidade temporária.
   let user=null;
+  if(nome.includes('@')){
+    try{
+      const auth=await blipAuthLogin(nome,senha);
+      blipAuthSession._expiresAt=Date.now()+(auth.expires_in||3600)*1000;
+      const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/blip_listar_os_importadas`,{method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+auth.access_token,'Content-Type':'application/json'},body:'{}'});
+      if(!res.ok){blipAuthSession=null;throw new Error('Conta sem permissão para consultar as OS (HTTP '+res.status+').');}
+      user={id:auth.user?.id,nome:auth.user?.email?.split('@')[0]||'Usuário Auth',role:'admin',inicial:'A',auth:true};
+    }catch(e){blipAuthSession=null;const el=document.getElementById('login-err');el.textContent='Login Auth: '+e.message;el.style.display='block';return;}
+  }
+  // Login legado, mantido até a migração completa (não autoriza a leitura das OS importadas).
+  if(!user){
   try{
     const res=await sb('usuarios','GET',null,`?nome=ilike.${encodeURIComponent(nome)}&ativo=eq.true`);
     if(res&&res.length){
@@ -1193,6 +1219,7 @@ async function doLogin(){
   }catch(e){}
   // Fallback local
   if(!user)user=USUARIOS.find(u=>u.nome.toLowerCase()===nome.toLowerCase()&&u.senha===senha);
+  }
   if(!user){document.getElementById('login-err').style.display='block';return;}
   document.getElementById('login-err').style.display='none';
   currentUser=user;
@@ -1222,7 +1249,7 @@ async function doLogin(){
 function doLogout(){
   atualizarBadgeVersaoV11();
   if(!confirm('Deseja sair?'))return;
-  currentUser=null;
+  currentUser=null;blipAuthSession=null;blipOSImportadas=[];
   const ms=document.getElementById('main-shell');
   const ls=document.getElementById('login-screen');
   if(ms)ms.style.display='none';
@@ -1371,9 +1398,11 @@ let blipOSImportadas=[];
 const blipEscImport=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function blipCarregarImportadas(){
   const status=document.getElementById('blip-importadas-status');if(!status)return;
+  if(!blipAuthSession){blipOSImportadas=[];blipRenderImportadas();status.textContent='🔒 Para consultar as OS importadas, saia e entre com seu e-mail e senha do Supabase Auth. O login antigo continua disponível para as demais funções.';return;}
   status.textContent='Carregando OS importadas...';
   try{
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/blip_listar_os_importadas`,{method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'},body:'{}'});
+    const token=await blipAuthToken();
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/blip_listar_os_importadas`,{method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}'});
     if(!res.ok)throw new Error(`HTTP ${res.status} — ${await res.text()}`);
     const data=await res.json();blipOSImportadas=Array.isArray(data)?data:[];
     status.textContent=`${blipOSImportadas.length} OS disponíveis • dados da tabela de importação • somente leitura`;
