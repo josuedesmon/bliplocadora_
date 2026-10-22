@@ -319,7 +319,7 @@ tr:hover td{background:var(--bg3)}
         <span id="sync-txt">Conectando...</span>
       </div>
       <div id="app-version-badge" class="version-badge-admin">
-        <strong>Dashboard V14</strong><br>
+        <strong>Dashboard V15</strong><br>
         OS 2025/2026 • acesso Auth protegido
       </div>
     </div>
@@ -400,7 +400,7 @@ tr:hover td{background:var(--bg3)}
       <div style="overflow-x:auto;max-height:490px;overflow-y:auto"><table><thead><tr><th>OS</th><th>Ano</th><th>Cliente</th><th>Retirada</th><th>Devolução</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody id="blip-importadas-tbody"><tr><td colspan="8">Carregando...</td></tr></tbody></table></div>
     </section>
     </div>
-    <div id="blip-importadas-modal" class="overlay"><div class="modal" style="max-width:780px"><div class="mh"><h2>OS importada (somente leitura)</h2><button class="mclose" onclick="closeM('blip-importadas-modal')">✕</button></div><div id="blip-importadas-detalhe"></div></div></div>
+    <div id="blip-importadas-modal" class="overlay"><div class="modal" style="max-width:780px"><div class="mh"><h2><span id="blip-importada-titulo">OS importada</span></h2><button class="mclose" onclick="closeM('blip-importadas-modal')">✕</button></div><div id="blip-importadas-detalhe"></div></div></div>
 
     <!-- DISPONIBILIDADE -->
     <div id="page-disponibilidade" class="page">
@@ -1405,7 +1405,7 @@ async function blipCarregarImportadas(){
     const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/blip_listar_os_importadas`,{method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}'});
     if(!res.ok)throw new Error(`HTTP ${res.status} — ${await res.text()}`);
     const data=await res.json();blipOSImportadas=Array.isArray(data)?data:[];
-    status.textContent=`${blipOSImportadas.length} OS disponíveis • dados da tabela de importação • somente leitura`;
+    status.textContent=`${blipOSImportadas.length} OS disponíveis • dados da tabela de importação • edição 2026 via fila`;
     blipRenderImportadas();
   }catch(e){status.textContent='Integração de leitura pendente: '+e.message;console.warn('OS importadas:',e);}
 }
@@ -1414,13 +1414,62 @@ function blipRenderImportadas(){
   const q=(document.getElementById('blip-importadas-busca')?.value||'').toLocaleLowerCase('pt-BR').trim();
   const ano=document.getElementById('blip-importadas-ano')?.value||'';
   const filtered=blipOSImportadas.filter(o=>(!ano||String(o.ano)===ano)&&(!q||[o.identificador,o.cliente_nome,o.equipamentos_texto].some(v=>String(v||'').toLocaleLowerCase('pt-BR').includes(q))));
-  body.innerHTML=filtered.length?filtered.map(o=>`<tr><td><b>#${blipEscImport(o.identificador||o.numero)}</b></td><td>${blipEscImport(o.ano)}</td><td>${blipEscImport(o.cliente_nome)}</td><td>${blipEscImport(o.retirada||'—')}</td><td>${blipEscImport(o.devolucao||'—')}</td><td>${o.valor_total==null?'—':Number(o.valor_total).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td><td>${blipEscImport(o.status_origem||'—')}</td><td><button class="btn btn-g btn-sm" onclick="blipVerImportada(${Number(o.id)})">Ver</button></td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;padding:20px">Nenhuma OS encontrada</td></tr>';
+  body.innerHTML=filtered.length?filtered.map(o=>`<tr><td><b>#${blipEscImport(o.identificador||o.numero)}</b></td><td>${blipEscImport(o.ano)}</td><td>${blipEscImport(o.cliente_nome)}</td><td>${blipEscImport(o.retirada||'—')}</td><td>${blipEscImport(o.devolucao||'—')}</td><td>${o.valor_total==null?'—':Number(o.valor_total).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td><td>${blipEscImport(o.status_origem||'—')}</td><td><button class="btn btn-g btn-sm" onclick="blipVerImportada(${Number(o.id)})">${Number(o.ano)===2026?'Abrir / editar':'Ver'}</button></td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;padding:20px">Nenhuma OS encontrada</td></tr>';
+}
+const blipV15Status=['pendente','Devolvido','vendido','conserto','reservado','Alugado','Pré Reserva','Cancelado','Consertado','emprestado'];
+const blipV15Pagamento=['pago','em aberto','não aplicável'];
+function blipV15Opcoes(valores,atual){
+  const itens=valores.includes(String(atual??''))?valores:[String(atual??''),...valores];
+  return itens.map(v=>`<option value="${blipEscImport(v)}" ${String(atual??'')===v?'selected':''}>${blipEscImport(v||'—')}</option>`).join('');
 }
 function blipVerImportada(id){
   const o=blipOSImportadas.find(x=>Number(x.id)===id);if(!o)return;
-  const fields=[['Identificador',o.identificador],['Ano',o.ano],['Cliente',o.cliente_nome],['Retirada',o.retirada],['Devolução',o.devolucao],['Valor',o.valor_total],['Status',o.status_origem],['Pagamento',o.pagamento_origem],['Equipamentos',o.equipamentos_texto],['Comentário',o.comentario],['Pendências',o.pendencias]];
-  document.getElementById('blip-importadas-detalhe').innerHTML=fields.map(([k,v])=>`<div style="padding:9px 0;border-bottom:1px solid var(--border)"><b>${blipEscImport(k)}</b><div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:5px">${blipEscImport(v||'—')}</div></div>`).join('');
+  const editavel=Number(o.ano)===2026&&!!blipAuthSession;
+  document.getElementById('blip-importada-titulo').textContent=`OS #${o.identificador||o.numero} • ${editavel?'Edição V15':'Consulta'}`;
+  const campos=[['Cliente','cliente_nome'],['Retirada','retirada'],['Devolução','devolucao'],['Equipamentos','equipamentos_texto'],['Valor total','valor_total'],['Status','status_origem'],['Pagamento','pagamento_origem'],['Comentário','comentario'],['Pendências','pendencias']];
+  const input=(nome,chave)=>{
+    const valor=String(o[chave]??'');
+    if(chave==='status_origem'||chave==='pagamento_origem')return `<select data-blip-v15="${chave}">${blipV15Opcoes(chave==='status_origem'?blipV15Status:blipV15Pagamento,valor)}</select>`;
+    if(['equipamentos_texto','comentario','pendencias'].includes(chave))return `<textarea data-blip-v15="${chave}" rows="${chave==='equipamentos_texto'?5:3}">${blipEscImport(valor)}</textarea>`;
+    return `<input data-blip-v15="${chave}" ${chave==='valor_total'?'type="number" step="0.01" min="0"':'type="text"'} value="${blipEscImport(valor)}">`;
+  };
+  const detalhe=document.getElementById('blip-importadas-detalhe');
+  if(!editavel){
+    detalhe.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:12px">Histórico somente leitura • Identificador ${blipEscImport(o.identificador)}</div>`+campos.map(([nome,chave])=>`<div style="padding:9px 0;border-bottom:1px solid var(--border)"><b>${blipEscImport(nome)}</b><div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:5px">${blipEscImport(o[chave]??'—')}</div></div>`).join('');
+  }else{
+    detalhe.innerHTML=`<div style="padding:10px;border:1px solid var(--border2);border-radius:8px;margin-bottom:14px;font-size:12px;color:var(--text2)">🔄 Ao salvar, a alteração entra na fila do Supabase. <b>Ela só chegará ao Google Sheets depois que o processamento de saída for ativado e validado.</b> Não edite a mesma OS simultaneamente nos dois lugares.</div>`+
+      `<div class="g2" style="gap:12px">`+campos.map(([nome,chave])=>`<div class="fg" style="${['equipamentos_texto','comentario','pendencias'].includes(chave)?'grid-column:1/-1':''}"><label>${blipEscImport(nome)}</label>${input(nome,chave)}</div>`).join('')+`</div>`+
+      `<div style="display:flex;gap:8px;justify-content:flex-end;align-items:center"><span id="blip-v15-salvar-status" style="font-size:12px;color:var(--text2)"></span><button class="btn btn-g" onclick="closeM('blip-importadas-modal')">Cancelar</button><button class="btn btn-p" id="blip-v15-salvar" onclick="blipV15SalvarImportada(${Number(o.id)})">Salvar na fila</button></div>`;
+  }
   openM('blip-importadas-modal');
+}
+async function blipV15SalvarImportada(id){
+  const o=blipOSImportadas.find(x=>Number(x.id)===id);
+  if(!o||Number(o.ano)!==2026||!blipAuthSession)return;
+  const dados={};
+  document.querySelectorAll('#blip-importadas-detalhe [data-blip-v15]').forEach(el=>{dados[el.dataset.blipV15]=el.value;});
+  if(!dados.cliente_nome.trim()){alert('Informe o cliente.');return;}
+  if(dados.valor_total!==''){
+    const v=Number(dados.valor_total);
+    if(!Number.isFinite(v)||v<0){alert('Valor total inválido.');return;}
+    dados.valor_total=v;
+  }else dados.valor_total=null;
+  const alterou=Object.keys(dados).some(k=>String(dados[k]??'')!==String(o[k]??''));
+  if(!alterou){alert('Nenhuma alteração identificada.');return;}
+  const btn=document.getElementById('blip-v15-salvar'),status=document.getElementById('blip-v15-salvar-status');
+  btn.disabled=true;status.textContent='Registrando na fila...';
+  try{
+    const token=await blipAuthToken();if(!token)throw Error('Faça login com e-mail pelo Supabase Auth.');
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/blip_v15_editar_os_importada`,{
+      method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({p_id:o.id,p_atualizado_em:o.atualizado_em,p_dados:dados})
+    });
+    const retorno=await res.json();
+    if(!res.ok)throw Error(retorno.message||`Erro HTTP ${res.status}`);
+    status.textContent=`✅ Fila #${retorno.fila_id} criada • aguardando envio ao Sheets`;
+    btn.textContent='Enfileirado';
+    alert(`Alteração registrada na fila #${retorno.fila_id}. Ainda não foi aplicada à planilha. Aguarde a validação do processamento de saída.`);
+  }catch(e){status.textContent='⚠️ '+e.message;btn.disabled=false;console.error('V15 salvar importada',e);}
 }
 
 // ===== INIT =====
